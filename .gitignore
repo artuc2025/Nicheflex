@@ -25,5 +25,21 @@ npm-debug.log*
 
 # Misc
 *.tsbuildinfo
+.state.json
 
 .codex
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# AI Service
+services/ai-service/.env
+services/ai-service/nul
+
+# Session logs
+daily/
+
+# State
+.state.json
