@@ -10,7 +10,7 @@ const router = useRouter()
 
 watch(user, () => {
   if (user.value) {
-    router.push('/dashboard')
+    router.push('/app')
   }
 }, { immediate: true })
 </script>

@@ -12,13 +12,15 @@ export default defineNuxtConfig({
       login: '/login',
       callback: '/confirm',
       include: undefined,
-      exclude: ['/', '/login', '/confirm'],
+      exclude: ['/', '/login', '/confirm', '/api/subscribe'],
     },
   },
 
   runtimeConfig: {
     youtubeApiKey: '',
     anthropicApiKey: '',
+    resendApiKey: '',
+    resendFrom: '',
     public: {
       siteUrl: '',
     },
