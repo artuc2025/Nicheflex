@@ -92,6 +92,26 @@
       <div v-if="!loading && filteredNiches.length === 0" class="py-20 text-center text-gray-400">
         No niches match your filters.
       </div>
+
+      <div class="mt-12 border-t border-gray-800 pt-8">
+        <h2 class="mb-4 text-xl font-bold">Generation History</h2>
+        <div v-if="historyLoading" class="py-6 text-center text-gray-500">Loading history...</div>
+        <div v-else-if="history.length === 0" class="py-6 text-center text-gray-500">No generations yet.</div>
+        <div v-else class="space-y-2">
+          <div
+            v-for="gen in history"
+            :key="gen.id"
+            class="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-900/50 px-4 py-3 cursor-pointer hover:bg-gray-800/50"
+            @click="openHistoryItem(gen)"
+          >
+            <div>
+              <div class="text-sm font-medium">{{ gen.niche_title }}</div>
+              <div class="text-xs text-gray-500">{{ new Date(gen.created_at).toLocaleDateString() }} · {{ gen.type }}</div>
+            </div>
+            <span class="text-xs text-orange-400">View →</span>
+          </div>
+        </div>
+      </div>
     </main>
 
     <Teleport to="body">
@@ -127,6 +147,168 @@
             <div class="rounded-lg bg-gray-800 p-3 text-center">
               <div class="text-xs text-gray-400">Channels</div>
               <div class="text-xl font-bold text-purple-400">{{ selectedNiche.channels_count }}</div>
+            </div>
+          </div>
+
+          <div class="mb-6 flex gap-3">
+            <button
+              class="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="generatingFor === selectedNiche.id"
+              @click="generateForNiche(selectedNiche, 'breakdown')"
+            >
+              <svg v-if="generatingFor === selectedNiche.id && generatingType === 'breakdown'" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              Generate Breakdown
+            </button>
+            <button
+              class="flex items-center gap-2 rounded-lg border border-orange-500 px-4 py-2 text-sm font-semibold text-orange-400 hover:bg-orange-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="generatingFor === selectedNiche.id"
+              @click="generateForNiche(selectedNiche, 'skeleton')"
+            >
+              <svg v-if="generatingFor === selectedNiche.id && generatingType === 'skeleton'" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              Generate Skeleton
+            </button>
+          </div>
+
+          <div v-if="genError" class="mb-4 rounded-lg border p-4 text-sm" :class="genErrorClass">
+            <div class="flex items-center gap-2">
+              <span class="font-medium">{{ genError }}</span>
+            </div>
+            <div v-if="genErrorCode === 402" class="mt-2">
+              <a href="#" class="inline-block rounded bg-orange-500 px-3 py-1 text-xs font-semibold text-white hover:bg-orange-600">Upgrade to Pro</a>
+            </div>
+            <div v-if="genErrorCode === 500 || genErrorCode === 422" class="mt-2">
+              <button class="text-xs text-orange-400 underline" @click="retryLastGeneration">Try again</button>
+            </div>
+          </div>
+
+          <div v-if="genResult && genResultType === 'breakdown'" class="mb-6 space-y-4">
+            <h3 class="text-lg font-bold text-orange-400">Niche Breakdown</h3>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Why It Works</h4>
+              <p class="mt-1 text-sm text-gray-300">{{ genResult.why_it_works }}</p>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Narrative Mechanics</h4>
+              <ul class="mt-1 space-y-1">
+                <li v-for="(m, i) in genResult.narrative_mechanics" :key="i" class="flex items-start gap-2 text-sm text-gray-300">
+                  <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                  {{ m }}
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Hook Patterns</h4>
+              <div class="mt-1 space-y-2">
+                <div v-for="(h, i) in genResult.hook_patterns" :key="i" class="rounded-lg bg-gray-800/50 px-3 py-2 text-sm text-gray-300">
+                  {{ h }}
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Audience Psychology</h4>
+              <p class="mt-1 text-sm text-gray-300">{{ genResult.audience_psychology }}</p>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Saturation Risk</h4>
+              <div class="mt-1 flex items-center gap-2">
+                <span class="inline-block rounded px-2 py-0.5 text-xs font-bold" :class="{
+                  'bg-green-500/20 text-green-400': genResult.saturation_risk.level === 'low',
+                  'bg-yellow-500/20 text-yellow-400': genResult.saturation_risk.level === 'medium',
+                  'bg-red-500/20 text-red-400': genResult.saturation_risk.level === 'high',
+                }">{{ genResult.saturation_risk.level }}</span>
+                <span class="text-xs text-gray-500">Window: {{ genResult.saturation_risk.window_estimate }}</span>
+              </div>
+              <p class="mt-1 text-sm text-gray-400">{{ genResult.saturation_risk.reasoning }}</p>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Entry Angle</h4>
+              <p class="mt-1 text-sm text-gray-300">{{ genResult.entry_angle }}</p>
+            </div>
+            <div v-if="genResult.red_flags?.length">
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Red Flags</h4>
+              <ul class="mt-1 space-y-1">
+                <li v-for="(f, i) in genResult.red_flags" :key="i" class="flex items-start gap-2 text-sm text-red-400">
+                  <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                  {{ f }}
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div v-if="genResult && genResultType === 'skeleton'" class="mb-6 space-y-4">
+            <h3 class="text-lg font-bold text-orange-400">Script Skeleton</h3>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Title Options</h4>
+              <div class="mt-1 space-y-1">
+                <div v-for="(t, i) in genResult.title_options" :key="i" class="rounded-lg bg-gray-800/50 px-3 py-2 text-sm text-gray-300">
+                  {{ t }}
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Hook</h4>
+              <div class="mt-1 rounded-lg bg-gray-800/50 p-3 space-y-1">
+                <p class="text-sm text-orange-300">"{{ genResult.hook.spoken_line }}"</p>
+                <p class="text-xs text-gray-400">Visual: {{ genResult.hook.visual_note }}</p>
+                <p class="text-xs text-gray-500 italic">Q: {{ genResult.hook.open_question }}</p>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Mystery Object</h4>
+              <p class="mt-1 text-sm text-gray-300">{{ genResult.mystery_object.what }} <span class="text-gray-500">(Act {{ genResult.mystery_object.first_mention_act }} → reveal Act {{ genResult.mystery_object.reveal_act }})</span></p>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Acts</h4>
+              <div class="mt-2 space-y-3">
+                <div v-for="act in genResult.acts" :key="act.n">
+                  <div class="flex items-center gap-3 mb-1">
+                    <span class="text-xs font-bold text-orange-400">Act {{ act.n }}</span>
+                    <span class="text-xs text-gray-500">{{ act.label }}</span>
+                    <span class="text-xs text-gray-600">{{ act.start_pct }}%–{{ act.end_pct }}%</span>
+                  </div>
+                  <div class="h-3 w-full overflow-hidden rounded-full bg-gray-800">
+                    <div class="h-full rounded-full transition-all" :class="{
+                      'bg-orange-500': act.n % 3 === 1,
+                      'bg-orange-400': act.n % 3 === 2,
+                      'bg-orange-300': act.n % 3 === 0,
+                    }" :style="{ width: (act.end_pct - act.start_pct) + '%', marginLeft: act.start_pct + '%' }" />
+                  </div>
+                  <ul class="mt-1 space-y-0.5 pl-4">
+                    <li v-for="(beat, bi) in act.beats" :key="bi" class="text-xs text-gray-400">• {{ beat }}</li>
+                  </ul>
+                  <p v-if="act.loop_tightener" class="mt-1 text-xs text-orange-400/70 italic">Loop tightener: {{ act.loop_tightener }}</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Reveal</h4>
+              <p class="mt-1 text-sm text-gray-300">{{ genResult.reveal.what_changes }}</p>
+              <p class="text-xs text-gray-500">Recontextualizes scenes {{ genResult.reveal.recontextualizes_scenes.join(', ') }}</p>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Counterattack Waves</h4>
+              <ul class="mt-1 space-y-1">
+                <li v-for="(w, i) in genResult.counterattack_waves" :key="i" class="text-sm text-gray-300">{{ w }}</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Narrator Asides</h4>
+              <ul class="mt-1 space-y-1">
+                <li v-for="(a, i) in genResult.narrator_asides" :key="i" class="text-sm text-gray-300 italic">"{{ a }}"</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">CTA</h4>
+              <p class="mt-1 text-sm text-gray-300">{{ genResult.cta }}</p>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Authenticity Checklist</h4>
+              <ul class="mt-1 space-y-1">
+                <li v-for="(c, i) in genResult.authenticity_checklist" :key="i" class="flex items-start gap-2 text-sm text-gray-300">
+                  <span class="mt-1 text-green-400">✓</span>
+                  {{ c }}
+                </li>
+              </ul>
             </div>
           </div>
 
@@ -189,6 +371,15 @@ interface OutlierRow {
   published_at: string
 }
 
+interface HistoryRow {
+  id: string
+  niche_id: string
+  niche_title: string
+  type: 'breakdown' | 'skeleton'
+  payload_json: Record<string, unknown>
+  created_at: string
+}
+
 const niches = ref<NicheRow[]>([])
 const loading = ref(true)
 const scanning = ref(false)
@@ -197,6 +388,18 @@ const filterLanguage = ref('')
 const selectedNiche = ref<NicheRow | null>(null)
 const outliers = ref<OutlierRow[]>([])
 const outlierLoading = ref(false)
+
+const generatingFor = ref<string | null>(null)
+const generatingType = ref<'breakdown' | 'skeleton' | null>(null)
+const genResult = ref<Record<string, unknown> | null>(null)
+const genResultType = ref<'breakdown' | 'skeleton' | null>(null)
+const genError = ref('')
+const genErrorCode = ref<number | null>(null)
+const lastGenerationNicheId = ref<string | null>(null)
+const lastGenerationType = ref<'breakdown' | 'skeleton' | null>(null)
+
+const history = ref<HistoryRow[]>([])
+const historyLoading = ref(false)
 
 const currentWeek = computed(() => {
   const d = new Date()
@@ -213,6 +416,12 @@ const filteredNiches = computed(() => {
     if (filterLanguage.value && n.language !== filterLanguage.value) return false
     return true
   })
+})
+
+const genErrorClass = computed(() => {
+  if (genErrorCode.value === 402) return 'border-orange-500/30 bg-orange-500/10 text-orange-300'
+  if (genErrorCode.value === 429) return 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300'
+  return 'border-red-500/30 bg-red-500/10 text-red-300'
 })
 
 function heatClass(score: number) {
@@ -251,6 +460,10 @@ async function fetchNiches() {
 
 async function openNiche(niche: NicheRow) {
   selectedNiche.value = niche
+  genResult.value = null
+  genResultType.value = null
+  genError.value = ''
+  genErrorCode.value = null
   outlierLoading.value = true
   try {
     const data = await $fetch('/api/outliers', {
@@ -260,6 +473,90 @@ async function openNiche(niche: NicheRow) {
   } finally {
     outlierLoading.value = false
   }
+}
+
+async function generateForNiche(niche: NicheRow, type: 'breakdown' | 'skeleton') {
+  if (generatingFor.value) return
+  generatingFor.value = niche.id
+  generatingType.value = type
+  genResult.value = null
+  genResultType.value = null
+  genError.value = ''
+  genErrorCode.value = null
+  lastGenerationNicheId.value = niche.id
+  lastGenerationType.value = type
+
+  try {
+    const body: Record<string, unknown> = { type, nicheId: niche.id }
+    if (type === 'skeleton') body.targetMinutes = 12
+
+    const res = await $fetch('/api/generate', {
+      method: 'POST',
+      body,
+    })
+
+    genResult.value = (res as any).payload
+    genResultType.value = type
+  } catch (err: any) {
+    const status = err?.response?.status || err?.statusCode
+    if (status === 401) {
+      navigateTo('/login')
+      return
+    }
+    genErrorCode.value = status
+    if (status === 402) {
+      genError.value = err?.response?._data?.message || err?.data?.message || 'Upgrade to Pro to continue generating.'
+    } else if (status === 422) {
+      genError.value = 'The model couldn\'t produce a valid result — try again.'
+    } else if (status === 429) {
+      genError.value = 'Too many requests, slow down.'
+    } else {
+      genError.value = 'Something went wrong. Please try again.'
+    }
+  } finally {
+    generatingFor.value = null
+    generatingType.value = null
+  }
+}
+
+function retryLastGeneration() {
+  if (!lastGenerationNicheId.value || !lastGenerationType.value) return
+  const niche = niches.value.find(n => n.id === lastGenerationNicheId.value)
+  if (niche) {
+    generateForNiche(niche, lastGenerationType.value)
+  }
+}
+
+async function fetchHistory() {
+  historyLoading.value = true
+  try {
+    const { data, error } = await supabase
+      .from('generations')
+      .select('id, niche_id, type, payload_json, created_at, niches!inner(title)')
+      .eq('user_id', user.value?.id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    if (error) throw error
+
+    history.value = (data || []).map((row: any) => ({
+      id: row.id,
+      niche_id: row.niche_id,
+      niche_title: row.niches?.title || 'Unknown',
+      type: row.type,
+      payload_json: row.payload_json,
+      created_at: row.created_at,
+    }))
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+function openHistoryItem(gen: HistoryRow) {
+  genResult.value = gen.payload_json
+  genResultType.value = gen.type
+  genError.value = ''
+  genErrorCode.value = null
 }
 
 async function runScan() {
@@ -277,5 +574,8 @@ async function signOut() {
   navigateTo('/')
 }
 
-onMounted(fetchNiches)
+onMounted(() => {
+  fetchNiches()
+  fetchHistory()
+})
 </script>
