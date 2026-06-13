@@ -45,6 +45,8 @@ export default defineEventHandler(async (event) => {
   const resendFrom = useRuntimeConfig().resendFrom
 
   if (resendKey && resendFrom) {
+    const contactMatch = resendFrom.match(/<([^>]+)>/)
+    const contactEmail = contactMatch ? contactMatch[1] : resendFrom
     try {
       await $fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -53,7 +55,7 @@ export default defineEventHandler(async (event) => {
           from: resendFrom,
           to: email,
           subject: 'Welcome to NicheHeat',
-          text: `Hey!\n\nYou're on the NicheHeat list. We'll send you hot niches and script insights for faceless YouTube creators.\n\nTalk soon,\nThe NicheHeat Team\n\n---\nTo unsubscribe, reply with "unsubscribe" or email hello@${(resendFrom.split('<')[1] || 'nicheheat.com').replace('>', '')}.`,
+          text: `Hey!\n\nYou're on the NicheHeat list. We'll send you hot niches and script insights for faceless YouTube creators.\n\nTalk soon,\nThe NicheHeat Team\n\n---\nTo unsubscribe, reply with "unsubscribe" or email ${contactEmail}.`,
         },
       })
     } catch (e) {
