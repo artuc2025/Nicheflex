@@ -7,7 +7,7 @@
     "ai-service": {
       "root": "services/ai-service",
       "routePrefix": "/_/ai-service",
-      "builder": "vercel/python",
+      "runtime": "@vercel/python",
       "entrypoint": "main.py"
     }
   }
