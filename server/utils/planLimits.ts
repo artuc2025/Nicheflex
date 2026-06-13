@@ -1,23 +1,21 @@
-import { createClient } from '@supabase/supabase-js'
+// server/utils/planLimits.ts
+// Tariff limits from PRD §8. Call assertGenerationAllowed() at the top of
+// generate.post.ts BEFORE calling the AI provider — limits bolted on after
+// Lemon Squeezy launch are much more painful.
+
+import { serverSupabaseServiceRole } from '#supabase/server'
 import type { H3Event } from 'h3'
 
-function getServiceClient() {
-  return createClient(
-    process.env.NUXT_PUBLIC_SUPABASE_URL!,
-    process.env.NUXT_SUPABASE_SERVICE_KEY || process.env.NUXT_SUPABASE_SECRET_KEY || process.env.NUXT_PUBLIC_SUPABASE_KEY!,
-  )
-}
-
 export const PLAN_LIMITS = {
-  free: { breakdown: 1, skeleton: 0 },
+  free: { breakdown: 1, skeleton: 0 },   // per calendar month
   pro: { breakdown: Infinity, skeleton: 30 },
 } as const
 
 export type Plan = keyof typeof PLAN_LIMITS
 export type GenType = 'breakdown' | 'skeleton'
 
-export async function getUserPlan(_event: H3Event, userId: string): Promise<Plan> {
-  const supabase = getServiceClient()
+export async function getUserPlan(event: H3Event, userId: string): Promise<Plan> {
+  const supabase = serverSupabaseServiceRole(event)
   const { data } = await supabase
     .from('subscriptions')
     .select('plan,status')
@@ -27,8 +25,8 @@ export async function getUserPlan(_event: H3Event, userId: string): Promise<Plan
   return data?.plan === 'pro' ? 'pro' : 'free'
 }
 
-export async function assertGenerationAllowed(_event: H3Event, userId: string, type: GenType) {
-  const plan = await getUserPlan(_event, userId)
+export async function assertGenerationAllowed(event: H3Event, userId: string, type: GenType) {
+  const plan = await getUserPlan(event, userId)
   const limit = PLAN_LIMITS[plan][type]
 
   if (limit === 0) {
@@ -44,7 +42,7 @@ export async function assertGenerationAllowed(_event: H3Event, userId: string, t
   const monthStart = new Date()
   monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0)
 
-  const supabase = getServiceClient()
+  const supabase = serverSupabaseServiceRole(event)
   const { count, error } = await supabase
     .from('generations')
     .select('id', { count: 'exact', head: true })
