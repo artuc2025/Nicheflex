@@ -9,3 +9,9 @@
 | [Incremental Verification](concepts/incremental-verification.md) | Build strategy: DB → Scanner → UI | 2026-06-13 | 2026-06-13 |
 | [Scanner → Supabase](connections/scanner-to-supabase.md) | Data flow from scanner to database | 2026-06-13 | 2026-06-13 |
 | [Auth → Profile](connections/auth-to-profile.md) | Auto-profile creation on signup | 2026-06-13 | 2026-06-13 |
+| [Lead Magnet Subscribers](concepts/lead-magnet-subscribers.md) | Email capture funnel with honeypot protection | 2026-06-14 | 2026-06-14 |
+| [Supabase Service Role Keys](concepts/supabase-service-role-keys.md) | Critical env var naming for RLS bypass | 2026-06-14 | 2026-06-14 |
+| [Server-Side Supabase Clients](concepts/server-side-supabase-clients.md) | client vs serviceRole: when to use each | 2026-06-14 | 2026-06-14 |
+| [Honeypot Anti-Spam](concepts/honeypot-anti-spam.md) | Hidden field bot rejection technique | 2026-06-14 | 2026-06-14 |
+| [Tech Debt Registry](concepts/tech-debt-registry.md) | Active debt items TD1-TD5 | 2026-06-14 | 2026-06-14 |
+| [Pre-Deployment Checklist](concepts/pre-deployment-checklist.md) | Step 1 launch requirements | 2026-06-14 | 2026-06-14 |

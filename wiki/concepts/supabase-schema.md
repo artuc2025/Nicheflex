@@ -1,12 +1,13 @@
 # Supabase Schema
 
-## Tables (6)
+## Tables (7)
 1. **niches** — id, slug, title, language, format (long|shorts)
 2. **niche_snapshots** — weekly metrics: heat_score, rpm range, views, channels count
 3. **outlier_videos** — top-performing videos per niche
 4. **user_profiles** — plan (free|pro), generations_used
 5. **subscriptions** — Lemon Squeezy subscription link
 6. **generations** — AI-generated breakdowns/skeletons
+7. **subscribers** — email, created_at, source (landing|api) — lead magnet
 
 ## Security
 - Row Level Security (RLS) enabled on all tables
