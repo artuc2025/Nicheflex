@@ -528,12 +528,13 @@ function retryLastGeneration() {
 }
 
 async function fetchHistory() {
+  if (!user.value?.id) return
   historyLoading.value = true
   try {
     const { data, error } = await supabase
       .from('generations')
       .select('id, niche_id, type, payload_json, created_at, niches!inner(title)')
-      .eq('user_id', user.value?.id)
+      .eq('user_id', user.value.id)
       .order('created_at', { ascending: false })
       .limit(20)
 
@@ -574,8 +575,11 @@ async function signOut() {
   navigateTo('/')
 }
 
+watch(user, (u) => {
+  if (u?.id) fetchHistory()
+}, { immediate: true })
+
 onMounted(() => {
   fetchNiches()
-  fetchHistory()
 })
 </script>

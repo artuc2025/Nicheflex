@@ -5,13 +5,14 @@ import { nicheBreakdownPrompt, scriptSkeletonPrompt } from '../prompts/flex'
 import { retryGenerate } from '../utils/retryGenerate'
 
 export default defineEventHandler(async (event) => {
-  let user: { id: string } | null = null
+  let user: { id?: string; sub?: string } | null = null
   try {
     user = await serverSupabaseUser(event)
   } catch {
     // serverSupabaseUser throws if no session
   }
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  const userId = user?.sub || user?.id
+  if (!userId) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
   const body = await readBody(event)
   const { type, nicheId, targetMinutes } = body as {
@@ -27,7 +28,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'nicheId is required' })
   }
 
-  await assertGenerationAllowed(event, user.id, type)
+  await assertGenerationAllowed(event, userId, type)
 
   const supabase = createClient(
     process.env.NUXT_PUBLIC_SUPABASE_URL!,
@@ -83,7 +84,7 @@ export default defineEventHandler(async (event) => {
   const result = await retryGenerate(aiReq, { type, maxAttempts: 3 })
 
   await supabase.from('generations').insert({
-    user_id: user.id,
+    user_id: userId,
     niche_id: nicheId,
     type,
     payload_json: result.parsed,
