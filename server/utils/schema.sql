@@ -84,6 +84,8 @@ CREATE TABLE generations (
   niche_id UUID NOT NULL REFERENCES niches(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('breakdown', 'skeleton')),
   payload_json JSONB NOT NULL DEFAULT '{}',
+  provider TEXT,
+  model TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

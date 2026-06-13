@@ -53,5 +53,7 @@ export interface Generation {
   niche_id: string
   type: 'breakdown' | 'skeleton'
   payload_json: Record<string, unknown>
+  provider: string
+  model: string
   created_at: string
 }

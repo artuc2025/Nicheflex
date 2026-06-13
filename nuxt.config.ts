@@ -35,5 +35,9 @@ export default defineNuxtConfig({
     },
   },
 
+  routeRules: {
+    '/api/generate': { maxDuration: 60 },
+  },
+
   devtools: { enabled: true },
 })
