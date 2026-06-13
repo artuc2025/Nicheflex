@@ -8,7 +8,7 @@ export default defineNitroPlugin((nitroApp) => {
     const token = authHeader.slice(7)
     const supabase = createClient(
       process.env.NUXT_PUBLIC_SUPABASE_URL!,
-      process.env.NUXT_SUPABASE_SERVICE_ROLE_KEY || process.env.NUXT_PUBLIC_SUPABASE_KEY!,
+      process.env.NUXT_SUPABASE_SECRET_KEY || process.env.NUXT_PUBLIC_SUPABASE_KEY!,
     )
 
     const { data: { user } } = await supabase.auth.getUser(token)

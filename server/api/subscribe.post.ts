@@ -1,4 +1,4 @@
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const MAX_LENGTH = 254
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Enter a valid email address.' })
   }
 
-  const supabase = serverSupabaseClient(event)
+  const supabase = await serverSupabaseServiceRole(event)
 
   const { error } = await supabase
     .from('subscribers')
