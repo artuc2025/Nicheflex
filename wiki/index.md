@@ -26,3 +26,7 @@
 | [YouTube Quota Budget](concepts/youtube-quota-budget.md) | Daily unit caps and cooldowns for YouTube API | 2026-06-14 | 2026-06-14 |
 | [h3 v2 Compatibility](concepts/h3-v2-compatibility.md) | Nuxt 3 framework migration issues and fixes | 2026-06-14 | 2026-06-14 |
 | [Per-Niche Scanner Queries](concepts/per-niche-scanner-queries.md) | Multiple targeted queries per niche category | 2026-06-14 | 2026-06-14 |
+| [Niche Profiles](concepts/niche-profiles.md) | 5 narrative profiles with arcs, artLock, emotionalEngine | 2026-06-14 | 2026-06-14 |
+| [Script Generation Pipeline](concepts/script-generation-pipeline.md) | Two-step generation: skeleton → script, Pro-only | 2026-06-14 | 2026-06-14 |
+| [Contract Evolution](concepts/contract-evolution.md) | Narrative contract term changes and backward compatibility | 2026-06-14 | 2026-06-14 |
+| [Skeleton → Script](connections/skeleton-to-script.md) | Script generation depends on skeleton existence | 2026-06-14 | 2026-06-14 |

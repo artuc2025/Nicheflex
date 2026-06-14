@@ -129,3 +129,26 @@
 
 ---
 
+## 2026-06-14 (Knowledge Compilation — Session 21:05)
+
+**Script Generation Pipeline & Contract Evolution** — Wired script generation as second step after skeleton, created niche profiles, evolved narrative contract terms.
+
+### New Articles Created
+- **Niche Profiles**: 5 profiles (tech, finance, crime, business, history, drama, space, horror) with arcs, artLock, emotionalEngine, anti-ban rules
+- **Script Generation Pipeline**: Two-step generation (skeleton → script), scriptPrompt() in flex.ts, Pro-only gating (30/mo quota)
+- **Contract Evolution**: `mystery_object` → `central_engine`, `counterattack_waves` → `escalation_ladder`
+- **Skeleton → Script** (connection): Script generation depends on skeleton existence
+
+### Key Insights Captured
+1. **Generation Before Monetization**: Explicit priority — strengthen generation before monetization
+2. **One-Shot JSON**: Product is "one-click" — no interactive interview
+3. **Script = Second Step**: Skeleton must exist first, script is Pro-only
+4. **Contract Backward Compatibility**: Old DB data fails new validator (forces regeneration)
+5. **Gemini 2.5-flash Quality**: 8/10 first try, 0 banned phrases in 10/10 runs
+
+### Files Updated
+- `wiki/index.md` — Added 4 new entries
+- `wiki/log.md` — Added compilation entry
+
+---
+
