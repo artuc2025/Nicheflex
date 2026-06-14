@@ -15,3 +15,7 @@
 | [Honeypot Anti-Spam](concepts/honeypot-anti-spam.md) | Hidden field bot rejection technique | 2026-06-14 | 2026-06-14 |
 | [Tech Debt Registry](concepts/tech-debt-registry.md) | Active debt items TD1-TD5 | 2026-06-14 | 2026-06-14 |
 | [Pre-Deployment Checklist](concepts/pre-deployment-checklist.md) | Step 1 launch requirements | 2026-06-14 | 2026-06-14 |
+| [Generation UI](concepts/generation-ui.md) | Complete generation interface with state machine and history | 2026-06-14 | 2026-06-14 |
+| [Session Resolution Paths](concepts/session-resolution-paths.md) | Two independent auth paths causing bugs | 2026-06-14 | 2026-06-14 |
+| [Client-Side History with RLS](concepts/client-side-history-rls.md) | History data fetched client-side with RLS policies | 2026-06-14 | 2026-06-14 |
+| [Auth → Generation](connections/auth-to-generation.md) | Session resolution affects generation quota checks | 2026-06-14 | 2026-06-14 |

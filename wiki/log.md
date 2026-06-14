@@ -63,3 +63,25 @@
 
 ---
 
+## 2026-06-14 (Knowledge Compilation)
+
+**Wiki Updated** — Extracted 4 new articles from daily log sessions.
+
+### New Articles Created
+- **Generation UI**: Complete generation interface with state machine, structured renderers, error handling, history
+- **Session Resolution Paths**: Two independent auth paths causing 500 errors
+- **Client-Side History with RLS**: History data fetched client-side with RLS policies
+- **Auth → Generation**: Connection between session resolution and generation quota checks
+
+### Key Insights Captured
+1. **Two Auth Paths**: `serverSupabaseUser` (SSR cookies) vs `event.context.user` (Authorization header)
+2. **Generation UI Architecture**: State machine pattern with client-side history
+3. **Bug Root Causes**: Session resolution failures, UUID errors from premature queries
+4. **Security Pattern**: Client-side RLS for history, server-side service role for writes
+
+### Files Updated
+- `wiki/index.md` — Added 4 new entries
+- `wiki/log.md` — Added compilation entry
+
+---
+
