@@ -475,25 +475,17 @@ function timeAgo(dateStr: string) {
 }
 
 async function loadSavedGenerations(nicheId: string) {
-  console.log('[load] called niche=', nicheId, 'user.id=', user.value?.id, 'user.sub=', (user.value as any)?.sub, 'user keys=', user.value ? Object.keys(user.value) : 'null')
-  if (!user.value?.id) { console.log('[load] ABORT: user.id undefined'); return }
-
-  const filters = { user_id: user.value.id, niche_id: nicheId }
-  console.log('[load] query filters=', JSON.stringify(filters))
-
+  const userId = user.value?.sub || (user.value as any)?.id
+  if (!userId) return
   const { data, error } = await supabase
     .from('generations')
     .select('type, payload_json, created_at')
-    .eq('user_id', user.value.id)
+    .eq('user_id', userId)
     .eq('niche_id', nicheId)
     .order('created_at', { ascending: false })
     .limit(2)
 
-  console.log('[load] raw response:', JSON.stringify({ error, dataLen: data?.length, rows: data?.map((r: any) => ({ type: r.type, payloadType: typeof r.payload_json, payloadSnippet: JSON.stringify(r.payload_json).slice(0, 80) })) }))
-
-  if (error) { console.log('[load] ERROR:', error.message, error); return }
-  if (!data || data.length === 0) { console.log('[load] EMPTY — no rows returned'); return }
-
+  if (error || !data) return
   for (const row of data as Array<{ type: string; payload_json: Record<string, unknown>; created_at: string }>) {
     if (row.type === 'breakdown' && !savedBreakdown.value) {
       savedBreakdown.value = row.payload_json
@@ -503,8 +495,6 @@ async function loadSavedGenerations(nicheId: string) {
       savedSkeletonDate.value = row.created_at
     }
   }
-
-  console.log('[load] after assignment — savedBreakdown=', !!savedBreakdown.value, 'savedSkeleton=', !!savedSkeleton.value)
 }
 
 async function fetchNiches() {
@@ -541,7 +531,6 @@ async function openNiche(niche: NicheRow) {
   } finally {
     outlierLoading.value = false
   }
-  console.log('[openNiche] niche.id=', niche.id, 'activeBreakdown=', !!activeBreakdown.value, 'activeSkeleton=', !!activeSkeleton.value, 'savedBreakdown=', !!savedBreakdown.value, 'savedSkeleton=', !!savedSkeleton.value)
 }
 
 async function generateForNiche(niche: NicheRow, type: 'breakdown' | 'skeleton') {
@@ -604,13 +593,14 @@ function retryLastGeneration() {
 }
 
 async function fetchHistory() {
-  if (!user.value?.id) return
+  const userId = user.value?.sub || (user.value as any)?.id
+  if (!userId) return
   historyLoading.value = true
   try {
     const { data, error } = await supabase
       .from('generations')
       .select('id, niche_id, type, payload_json, created_at, niches!inner(title)')
-      .eq('user_id', user.value.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(20)
 
