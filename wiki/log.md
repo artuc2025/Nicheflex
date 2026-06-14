@@ -106,3 +106,26 @@
 
 ---
 
+## 2026-06-14 (Knowledge Compilation — Session 15:08)
+
+**YouTube Scanner Language Filter & Quota System** — Implemented 3-layer English-only defense, quota budget system, and per-niche queries.
+
+### New Articles Created
+- **YouTube Language Filtering**: 3-layer defense against non-English content (non-Latin script, keyword blocklist, audio language check)
+- **YouTube Quota Budget**: Daily unit caps (9,000), 8-hour cooldown, 3,216 units/scan
+- **h3 v2 Compatibility**: Framework migration issues (getQuery, getHeader crashes)
+- **Per-Niche Scanner Queries**: 4 targeted queries per niche (32 total) for better coverage
+
+### Key Insights Captured
+1. **Three-Layer Defense**: Non-Latin script + keyword blocklist + audio language check
+2. **15% Threshold**: Balances catching non-English vs allowing mixed-script English
+3. **Quota Management**: 9,000 daily cap with 8-hour cooldown (~3 scans/day)
+4. **h3 v2 Issues**: Direct property access preferred over helper functions
+
+### Files Updated
+- `wiki/index.md` — Added 4 new entries
+- `wiki/concepts/scanner-pipeline.md` — Updated with language filtering and quota info
+- `wiki/log.md` — Added compilation entry
+
+---
+

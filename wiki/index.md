@@ -22,3 +22,7 @@
 | [Banned-Phrase Validation](concepts/banned-phrase-validation.md) | Production validator scanning for 8 banned phrases | 2026-06-14 | 2026-06-14 |
 | [Prompt Anti-Ban Engineering](concepts/prompt-anti-ban-engineering.md) | Recency effect placement + anti-ban authenticity layer | 2026-06-14 | 2026-06-14 |
 | [Test Harness Architecture](concepts/test-harness-architecture.md) | End-to-end quality validation using production validators | 2026-06-14 | 2026-06-14 |
+| [YouTube Language Filtering](concepts/youtube-language-filtering.md) | 3-layer English-only defense against non-English content | 2026-06-14 | 2026-06-14 |
+| [YouTube Quota Budget](concepts/youtube-quota-budget.md) | Daily unit caps and cooldowns for YouTube API | 2026-06-14 | 2026-06-14 |
+| [h3 v2 Compatibility](concepts/h3-v2-compatibility.md) | Nuxt 3 framework migration issues and fixes | 2026-06-14 | 2026-06-14 |
+| [Per-Niche Scanner Queries](concepts/per-niche-scanner-queries.md) | Multiple targeted queries per niche category | 2026-06-14 | 2026-06-14 |
