@@ -106,7 +106,9 @@ OUTPUT CONTRACT — JSON object with exactly these keys:
   "narrator_asides": [ { "act": number, "note": string } ],   // 2-3 human-marker spots
   "cta": string,                      // soft, in-world CTA, never "like and subscribe" verbatim
   "authenticity_checklist": string[]  // 3-5 self-checks this skeleton already satisfies
-}`
+}
+
+FINAL HARD RULE — the output must NOT contain anywhere: "in today's video", "in this video", "smash that like", "like and subscribe", "without further ado", "welcome back to", "let's dive in". If you were about to write one, rewrite that line.`
 
   return { system, user }
 }

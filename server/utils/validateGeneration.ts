@@ -1,5 +1,27 @@
 export type ValidationIssues = string[]
 
+const BANNED_PHRASES = [
+  'in today\'s video',
+  'in this video',
+  'without further ado',
+  'smash that like',
+  'like and subscribe',
+  'don\'t forget to subscribe',
+  'welcome back to',
+  'let\'s dive in',
+]
+
+function checkBannedPhrases(p: unknown): ValidationIssues {
+  const issues: ValidationIssues = []
+  const json = JSON.stringify(p).toLowerCase()
+  for (const phrase of BANNED_PHRASES) {
+    if (json.includes(phrase)) {
+      issues.push(`banned phrase: "${phrase}"`)
+    }
+  }
+  return issues
+}
+
 export function validateBreakdown(p: unknown): ValidationIssues {
   const issues: ValidationIssues = []
   if (!p || typeof p !== 'object') return ['Payload is not an object']
@@ -53,6 +75,8 @@ export function validateBreakdown(p: unknown): ValidationIssues {
   if (!Array.isArray(o.red_flags)) {
     issues.push('red_flags must be a string[]')
   }
+
+  issues.push(...checkBannedPhrases(p))
 
   return issues
 }
@@ -151,6 +175,8 @@ export function validateSkeleton(p: unknown): ValidationIssues {
   if (!Array.isArray(o.authenticity_checklist) || o.authenticity_checklist.length < 3) {
     issues.push('authenticity_checklist must be a string[] with at least 3 items')
   }
+
+  issues.push(...checkBannedPhrases(p))
 
   return issues
 }

@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { serverSupabaseUser } from '#supabase/server'
 import { assertGenerationAllowed } from '../utils/planLimits'
-import { nicheBreakdownPrompt, scriptSkeletonPrompt } from '../prompts/flex'
-import { retryGenerate } from '../utils/retryGenerate'
+import { runGeneration } from '../utils/runGeneration'
 
 export default defineEventHandler(async (event) => {
   let user: { id?: string; sub?: string } | null = null
@@ -58,39 +57,27 @@ export default defineEventHandler(async (event) => {
       channelAgeDays: v.channel_name ? undefined : undefined,
     }))
 
-  const fmt = (niche.format === 'long' ? 'longform' : 'shorts') as 'longform' | 'shorts'
-
-  let aiReq
-
-  if (type === 'breakdown') {
-    const prompt = nicheBreakdownPrompt({
+  const result = await runGeneration(
+    type,
+    {
       title: niche.title,
       category: niche.category || 'general',
-      format: fmt,
+      format: niche.format === 'long' ? 'longform' : 'shorts',
       outliers: topOutliers,
       heat: latest?.heat_score ?? 0,
       rpmRange: latest ? `$${latest.rpm_low}–$${latest.rpm_high}` : 'N/A',
-    })
-    aiReq = { system: prompt.system, user: prompt.user, json: true as const }
-  } else {
-    const prompt = scriptSkeletonPrompt({
-      nicheTitle: niche.title,
-      format: fmt,
-      targetMinutes: targetMinutes ?? 12,
-    })
-    aiReq = { system: prompt.system, user: prompt.user, json: true as const }
-  }
-
-  const result = await retryGenerate(aiReq, { type, maxAttempts: 3 })
+    },
+    { targetMinutes },
+  )
 
   await supabase.from('generations').insert({
     user_id: userId,
     niche_id: nicheId,
     type,
-    payload_json: result.parsed,
+    payload_json: result.payload,
     provider: result.provider,
     model: result.model,
   })
 
-  return { ok: true, payload: result.parsed, type, provider: result.provider }
+  return { ok: true, payload: result.payload, type, provider: result.provider }
 })

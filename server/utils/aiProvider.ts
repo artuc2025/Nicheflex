@@ -1,12 +1,5 @@
-// server/utils/aiProvider.ts
-// Provider abstraction: one interface, swappable backends.
-// Lets you A/B test models for quality/price without touching generate.post.ts.
-// Select via env: AI_PROVIDER = anthropic | gemini | fastapi
-//
-// ENV per provider:
-//   anthropic: ANTHROPIC_API_KEY, ANTHROPIC_MODEL (default claude-sonnet-4-6)
-//   gemini:    GEMINI_API_KEY, GEMINI_MODEL (default gemini-2.0-flash)
-//   fastapi:   AI_SERVICE_URL (your existing FastAPI service), AI_SERVICE_KEY (optional)
+import { ofetch } from 'ofetch'
+import { createError } from 'h3'
 
 export interface AIRequest {
   system: string
@@ -26,12 +19,19 @@ export interface AIResponse<T = unknown> {
 }
 
 function stripFences(s: string): string {
-  return s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
+  let t = s.trim()
+  t = t.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
+  const start = t.indexOf('{')
+  const end = t.lastIndexOf('}')
+  if (start !== -1 && end > start) {
+    t = t.substring(start, end + 1)
+  }
+  return t
 }
 
 async function callAnthropic(req: AIRequest) {
   const model = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6'
-  const res = await $fetch<any>('https://api.anthropic.com/v1/messages', {
+  const res = await ofetch<any>('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'x-api-key': process.env.ANTHROPIC_API_KEY!,
@@ -52,7 +52,7 @@ async function callAnthropic(req: AIRequest) {
 
 async function callGemini(req: AIRequest) {
   const model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash'
-  const res = await $fetch<any>(
+  const res = await ofetch<any>(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
     {
       method: 'POST',
@@ -62,7 +62,6 @@ async function callGemini(req: AIRequest) {
         generationConfig: {
           maxOutputTokens: req.maxTokens ?? 4096,
           temperature: req.temperature ?? 0.8,
-          ...(req.json ? { responseMimeType: 'application/json' } : {}),
         },
       },
     },
@@ -74,7 +73,7 @@ async function callGemini(req: AIRequest) {
 async function callFastAPI(req: AIRequest) {
   // Adapter for an external FastAPI AI service.
   // Adjust the path/payload to match your service contract.
-  const res = await $fetch<any>(`${process.env.AI_SERVICE_URL}/generate`, {
+  const res = await ofetch<any>(`${process.env.AI_SERVICE_URL}/generate`, {
     method: 'POST',
     headers: process.env.AI_SERVICE_KEY ? { Authorization: `Bearer ${process.env.AI_SERVICE_KEY}` } : {},
     body: {
@@ -102,7 +101,8 @@ export async function aiGenerate<T = unknown>(req: AIRequest): Promise<AIRespons
     try {
       out.parsed = JSON.parse(stripFences(text)) as T
     } catch {
-      // One retry signal upward: caller decides whether to re-generate.
+      console.error(`[aiGenerate] JSON parse failed (provider=${provider}, model=${model})`)
+      console.error(`[aiGenerate] Raw response (first 500 chars): ${text.substring(0, 500)}`)
       throw createError({ statusCode: 502, message: `AI returned invalid JSON (provider=${provider})` })
     }
   }
