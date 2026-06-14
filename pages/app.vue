@@ -154,7 +154,7 @@
             </div>
           </div>
 
-          <div class="mb-6 flex gap-3">
+          <div class="mb-6 flex gap-3 flex-wrap">
             <button
               class="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="generatingFor === selectedNiche.id"
@@ -170,6 +170,15 @@
             >
               <svg v-if="generatingFor === selectedNiche.id && generatingType === 'skeleton'" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
               {{ savedSkeleton ? 'Regenerate' : 'Generate' }} Skeleton
+            </button>
+            <button
+              v-if="activeSkeleton"
+              class="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="generatingFor === selectedNiche.id"
+              @click="generateForNiche(selectedNiche, 'script')"
+            >
+              <svg v-if="generatingFor === selectedNiche.id && generatingType === 'script'" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              {{ savedScript ? 'Regenerate' : 'Generate' }} Full Script
             </button>
           </div>
 
@@ -264,8 +273,8 @@
               </div>
             </div>
             <div>
-              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Mystery Object</h4>
-              <p class="mt-1 text-sm text-gray-300">{{ activeSkeleton!.mystery_object.what }} <span class="text-gray-500">(Act {{ activeSkeleton!.mystery_object.first_mention_act }} → reveal Act {{ activeSkeleton!.mystery_object.reveal_act }})</span></p>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Central Engine</h4>
+              <p class="mt-1 text-sm text-gray-300">{{ activeSkeleton!.central_engine.what }} <span class="text-gray-500">(planted Act {{ activeSkeleton!.central_engine.planted_in_act }} → paid off Act {{ activeSkeleton!.central_engine.paid_off_in_act }})</span></p>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Acts</h4>
@@ -296,15 +305,19 @@
               <p class="text-xs text-gray-500">Recontextualizes scenes {{ activeSkeleton!.reveal.recontextualizes_scenes.join(', ') }}</p>
             </div>
             <div>
-              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Counterattack Waves</h4>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Escalation Ladder</h4>
               <ul class="mt-1 space-y-1">
-                <li v-for="(w, i) in activeSkeleton!.counterattack_waves" :key="i" class="text-sm text-gray-300">{{ w }}</li>
+                <li v-for="(w, i) in activeSkeleton!.escalation_ladder" :key="i" class="text-sm text-gray-300">
+                  <span class="font-medium text-orange-400">Rung {{ w.rung }}:</span> {{ w.beat }} <span class="text-gray-500">— {{ w.raises_stakes }}</span>
+                </li>
               </ul>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Narrator Asides</h4>
               <ul class="mt-1 space-y-1">
-                <li v-for="(a, i) in activeSkeleton!.narrator_asides" :key="i" class="text-sm text-gray-300 italic">"{{ a }}"</li>
+                <li v-for="(a, i) in activeSkeleton!.narrator_asides" :key="i" class="text-sm text-gray-300 italic">
+                  <span class="text-orange-400 not-italic">Act {{ a.act }}:</span> "{{ a.note }}"
+                </li>
               </ul>
             </div>
             <div>
@@ -319,6 +332,35 @@
                   {{ c }}
                 </li>
               </ul>
+            </div>
+          </div>
+
+          <div v-if="activeScript" class="mb-6 space-y-4">
+            <div class="flex items-center gap-3">
+              <h3 class="text-lg font-bold text-green-400">Full Script</h3>
+              <span v-if="savedScriptDate && !genResult" class="text-xs text-gray-500">Generated {{ timeAgo(savedScriptDate) }}</span>
+              <span class="text-xs text-gray-500">{{ activeScript!.word_count }} words</span>
+              <button
+                class="ml-auto text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2 py-1"
+                @click="copyScript"
+              >
+                {{ copied ? 'Copied!' : 'Copy' }}
+              </button>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Title</h4>
+              <p class="mt-1 text-sm text-gray-300">{{ activeScript!.title }}</p>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Hook Line</h4>
+              <p class="mt-1 text-sm text-orange-300 italic">"{{ activeScript!.hook_line }}"</p>
+            </div>
+            <div class="rounded-lg bg-gray-800/50 p-4">
+              <div class="prose prose-invert prose-sm max-w-none text-gray-300 whitespace-pre-wrap text-sm leading-relaxed">{{ activeScript!.script_markdown }}</div>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">CTA Line</h4>
+              <p class="mt-1 text-sm text-green-300 italic">"{{ activeScript!.cta_line }}"</p>
             </div>
           </div>
 
@@ -391,7 +433,7 @@ interface HistoryRow {
   id: string
   niche_id: string
   niche_title: string
-  type: 'breakdown' | 'skeleton'
+  type: 'breakdown' | 'skeleton' | 'script'
   payload_json: Record<string, unknown>
   created_at: string
 }
@@ -406,18 +448,21 @@ const outliers = ref<OutlierRow[]>([])
 const outlierLoading = ref(false)
 
 const generatingFor = ref<string | null>(null)
-const generatingType = ref<'breakdown' | 'skeleton' | null>(null)
+const generatingType = ref<'breakdown' | 'skeleton' | 'script' | null>(null)
 const genResult = ref<Record<string, unknown> | null>(null)
-const genResultType = ref<'breakdown' | 'skeleton' | null>(null)
+const genResultType = ref<'breakdown' | 'skeleton' | 'script' | null>(null)
 const genError = ref('')
 const genErrorCode = ref<number | null>(null)
 const lastGenerationNicheId = ref<string | null>(null)
-const lastGenerationType = ref<'breakdown' | 'skeleton' | null>(null)
+const lastGenerationType = ref<'breakdown' | 'skeleton' | 'script' | null>(null)
 
 const savedBreakdown = ref<Record<string, unknown> | null>(null)
 const savedSkeleton = ref<Record<string, unknown> | null>(null)
+const savedScript = ref<Record<string, unknown> | null>(null)
 const savedBreakdownDate = ref<string | null>(null)
 const savedSkeletonDate = ref<string | null>(null)
+const savedScriptDate = ref<string | null>(null)
+const copied = ref(false)
 
 const history = ref<HistoryRow[]>([])
 const historyLoading = ref(false)
@@ -454,6 +499,7 @@ const genErrorClass = computed(() => {
 
 const activeBreakdown = computed(() => genResult.value && genResultType.value === 'breakdown' ? genResult.value : savedBreakdown.value)
 const activeSkeleton = computed(() => genResult.value && genResultType.value === 'skeleton' ? genResult.value : savedSkeleton.value)
+const activeScript = computed(() => genResult.value && genResultType.value === 'script' ? genResult.value : savedScript.value)
 
 function heatClass(score: number) {
   if (score >= 60) return 'bg-red-500/20 text-red-400'
@@ -500,7 +546,7 @@ async function loadSavedGenerations(nicheId: string) {
     .eq('user_id', userId)
     .eq('niche_id', nicheId)
     .order('created_at', { ascending: false })
-    .limit(2)
+    .limit(3)
 
   if (error || !data) return
   for (const row of data as Array<{ type: string; payload_json: Record<string, unknown>; created_at: string }>) {
@@ -510,6 +556,9 @@ async function loadSavedGenerations(nicheId: string) {
     } else if (row.type === 'skeleton' && !savedSkeleton.value) {
       savedSkeleton.value = row.payload_json
       savedSkeletonDate.value = row.created_at
+    } else if (row.type === 'script' && !savedScript.value) {
+      savedScript.value = row.payload_json
+      savedScriptDate.value = row.created_at
     }
   }
 }
@@ -532,8 +581,11 @@ async function openNiche(niche: NicheRow) {
   genErrorCode.value = null
   savedBreakdown.value = null
   savedSkeleton.value = null
+  savedScript.value = null
   savedBreakdownDate.value = null
   savedSkeletonDate.value = null
+  savedScriptDate.value = null
+  copied.value = false
   outlierLoading.value = true
   try {
     await Promise.all([
@@ -550,7 +602,7 @@ async function openNiche(niche: NicheRow) {
   }
 }
 
-async function generateForNiche(niche: NicheRow, type: 'breakdown' | 'skeleton') {
+async function generateForNiche(niche: NicheRow, type: 'breakdown' | 'skeleton' | 'script') {
   if (generatingFor.value) return
   generatingFor.value = niche.id
   generatingType.value = type
@@ -575,9 +627,12 @@ async function generateForNiche(niche: NicheRow, type: 'breakdown' | 'skeleton')
     if (type === 'breakdown') {
       savedBreakdown.value = (res as any).payload
       savedBreakdownDate.value = new Date().toISOString()
-    } else {
+    } else if (type === 'skeleton') {
       savedSkeleton.value = (res as any).payload
       savedSkeletonDate.value = new Date().toISOString()
+    } else {
+      savedScript.value = (res as any).payload
+      savedScriptDate.value = new Date().toISOString()
     }
   } catch (err: any) {
     const status = err?.response?.status || err?.statusCode
@@ -606,6 +661,25 @@ function retryLastGeneration() {
   const niche = niches.value.find(n => n.id === lastGenerationNicheId.value)
   if (niche) {
     generateForNiche(niche, lastGenerationType.value)
+  }
+}
+
+async function copyScript() {
+  const script = activeScript.value
+  if (!script?.script_markdown) return
+  try {
+    await navigator.clipboard.writeText(script.script_markdown as string)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
+  } catch {
+    const ta = document.createElement('textarea')
+    ta.value = script.script_markdown as string
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
   }
 }
 

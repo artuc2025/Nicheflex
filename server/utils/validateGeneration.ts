@@ -103,18 +103,18 @@ export function validateSkeleton(p: unknown): ValidationIssues {
     }
   }
 
-  if (!o.mystery_object || typeof o.mystery_object !== 'object') {
-    issues.push('mystery_object must be an object')
+  if (!o.central_engine || typeof o.central_engine !== 'object') {
+    issues.push('central_engine must be an object')
   } else {
-    const mo = o.mystery_object as Record<string, unknown>
-    if (typeof mo.what !== 'string' || !mo.what.trim()) {
-      issues.push('mystery_object.what must be a non-empty string')
+    const ce = o.central_engine as Record<string, unknown>
+    if (typeof ce.what !== 'string' || !ce.what.trim()) {
+      issues.push('central_engine.what must be a non-empty string')
     }
-    if (typeof mo.first_mention_act !== 'number') {
-      issues.push('mystery_object.first_mention_act must be a number')
+    if (typeof ce.planted_in_act !== 'number') {
+      issues.push('central_engine.planted_in_act must be a number')
     }
-    if (typeof mo.reveal_act !== 'number') {
-      issues.push('mystery_object.reveal_act must be a number')
+    if (typeof ce.paid_off_in_act !== 'number') {
+      issues.push('central_engine.paid_off_in_act must be a number')
     }
   }
 
@@ -160,12 +160,33 @@ export function validateSkeleton(p: unknown): ValidationIssues {
     }
   }
 
-  if (!Array.isArray(o.counterattack_waves) || o.counterattack_waves.length < 2) {
-    issues.push('counterattack_waves must have at least 2 items')
+  if (!Array.isArray(o.escalation_ladder) || o.escalation_ladder.length < 2) {
+    issues.push('escalation_ladder must have at least 2 items')
+  } else {
+    o.escalation_ladder.forEach((r: unknown, i: number) => {
+      if (!r || typeof r !== 'object') {
+        issues.push(`escalation_ladder[${i}] must be an object`)
+        return
+      }
+      const rung = r as Record<string, unknown>
+      if (typeof rung.rung !== 'number') issues.push(`escalation_ladder[${i}].rung must be a number`)
+      if (typeof rung.beat !== 'string' || !rung.beat.trim()) issues.push(`escalation_ladder[${i}].beat must be a non-empty string`)
+      if (typeof rung.raises_stakes !== 'string' || !rung.raises_stakes.trim()) issues.push(`escalation_ladder[${i}].raises_stakes must be a non-empty string`)
+    })
   }
 
   if (!Array.isArray(o.narrator_asides) || o.narrator_asides.length < 2) {
     issues.push('narrator_asides must have at least 2 items')
+  } else {
+    o.narrator_asides.forEach((a: unknown, i: number) => {
+      if (!a || typeof a !== 'object') {
+        issues.push(`narrator_asides[${i}] must be an object`)
+        return
+      }
+      const aside = a as Record<string, unknown>
+      if (typeof aside.act !== 'number') issues.push(`narrator_asides[${i}].act must be a number`)
+      if (typeof aside.note !== 'string' || !aside.note.trim()) issues.push(`narrator_asides[${i}].note must be a non-empty string`)
+    })
   }
 
   if (typeof o.cta !== 'string' || !o.cta.trim()) {
@@ -174,6 +195,48 @@ export function validateSkeleton(p: unknown): ValidationIssues {
 
   if (!Array.isArray(o.authenticity_checklist) || o.authenticity_checklist.length < 3) {
     issues.push('authenticity_checklist must be a string[] with at least 3 items')
+  }
+
+  issues.push(...checkBannedPhrases(p))
+
+  return issues
+}
+
+export function validateScript(p: unknown): ValidationIssues {
+  const issues: ValidationIssues = []
+  if (!p || typeof p !== 'object') return ['Payload is not an object']
+  const o = p as Record<string, unknown>
+
+  if (typeof o.title !== 'string' || !o.title.trim()) {
+    issues.push('title must be a non-empty string')
+  }
+
+  if (typeof o.script_markdown !== 'string' || !o.script_markdown.trim()) {
+    issues.push('script_markdown must be a non-empty string')
+  } else {
+    const wordCount = o.script_markdown.split(/\s+/).length
+    if (wordCount < 1200) {
+      issues.push(`script_markdown too short (${wordCount} words, minimum 1200)`)
+    }
+    if (wordCount > 3500) {
+      issues.push(`script_markdown too long (${wordCount} words, maximum 3500)`)
+    }
+  }
+
+  if (typeof o.word_count !== 'number' || o.word_count < 100) {
+    issues.push('word_count must be a number >= 100')
+  }
+
+  if (!Array.isArray(o.section_headers) || o.section_headers.length < 3) {
+    issues.push('section_headers must be a string[] with at least 3 items')
+  }
+
+  if (typeof o.hook_line !== 'string' || !o.hook_line.trim()) {
+    issues.push('hook_line must be a non-empty string')
+  }
+
+  if (typeof o.cta_line !== 'string' || !o.cta_line.trim()) {
+    issues.push('cta_line must be a non-empty string')
   }
 
   issues.push(...checkBannedPhrases(p))

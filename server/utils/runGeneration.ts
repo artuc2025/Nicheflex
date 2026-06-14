@@ -1,5 +1,6 @@
-import { nicheBreakdownPrompt, scriptSkeletonPrompt } from '../prompts/flex'
+import { nicheBreakdownPrompt, scriptSkeletonPrompt, scriptPrompt } from '../prompts/flex'
 import { retryGenerate } from './retryGenerate'
+import type { NicheProfile } from './nicheProfiles'
 
 export interface NicheInput {
   title: string
@@ -8,6 +9,10 @@ export interface NicheInput {
   outliers?: Array<{ title: string; views: number; channelAgeDays?: number }>
   heat?: number
   rpmRange?: string
+  slug?: string
+  profile?: NicheProfile
+  entryAngle?: string
+  hookPattern?: string
 }
 
 export interface RunGenerationResult {
@@ -21,9 +26,9 @@ export interface RunGenerationResult {
 }
 
 export async function runGeneration(
-  type: 'breakdown' | 'skeleton',
+  type: 'breakdown' | 'skeleton' | 'script',
   niche: NicheInput,
-  opts?: { targetMinutes?: number },
+  opts?: { targetMinutes?: number; skeleton?: Record<string, unknown> },
 ): Promise<RunGenerationResult> {
   const fmt = (niche.format ?? 'longform') as 'longform' | 'shorts'
 
@@ -39,11 +44,21 @@ export async function runGeneration(
       rpmRange: niche.rpmRange ?? 'N/A',
     })
     aiReq = { system: prompt.system, user: prompt.user, json: true as const, maxTokens: 4096 }
+  } else if (type === 'script') {
+    const prompt = scriptPrompt({
+      skeleton: opts?.skeleton ?? {},
+      profile: niche.profile,
+    })
+    aiReq = { system: prompt.system, user: prompt.user, json: true as const, maxTokens: 32768 }
   } else {
     const prompt = scriptSkeletonPrompt({
       nicheTitle: niche.title,
       format: fmt,
       targetMinutes: opts?.targetMinutes ?? 12,
+      entryAngle: niche.entryAngle,
+      hookPattern: niche.hookPattern,
+      profile: niche.profile,
+      topOutliers: niche.outliers?.slice(0, 3),
     })
     aiReq = { system: prompt.system, user: prompt.user, json: true as const, maxTokens: 8192 }
   }

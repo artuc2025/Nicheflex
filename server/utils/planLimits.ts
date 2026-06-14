@@ -7,12 +7,12 @@ import { serverSupabaseServiceRole } from '#supabase/server'
 import type { H3Event } from 'h3'
 
 export const PLAN_LIMITS = {
-  free: { breakdown: 1, skeleton: 0 },   // per calendar month
-  pro: { breakdown: Infinity, skeleton: 30 },
+  free: { breakdown: 1, skeleton: 0, script: 0 },
+  pro: { breakdown: Infinity, skeleton: 30, script: 30 },
 } as const
 
 export type Plan = keyof typeof PLAN_LIMITS
-export type GenType = 'breakdown' | 'skeleton'
+export type GenType = 'breakdown' | 'skeleton' | 'script'
 
 export async function getUserPlan(event: H3Event, userId: string): Promise<Plan> {
   const supabase = serverSupabaseServiceRole(event)

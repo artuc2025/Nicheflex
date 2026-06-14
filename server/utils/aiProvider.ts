@@ -20,7 +20,9 @@ export interface AIResponse<T = unknown> {
 
 function stripFences(s: string): string {
   let t = s.trim()
-  t = t.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
+  // Remove markdown code fences (```json ... ```)
+  t = t.replace(/^```(?:json|JSON)?\s*\n?/i, '').replace(/\n?\s*```\s*$/i, '').trim()
+  // Extract the JSON object between first { and last }
   const start = t.indexOf('{')
   const end = t.lastIndexOf('}')
   if (start !== -1 && end > start) {

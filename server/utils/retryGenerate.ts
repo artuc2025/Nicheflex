@@ -1,11 +1,11 @@
 import { createError } from 'h3'
 import { aiGenerate, type AIRequest, type AIResponse } from './aiProvider'
-import { validateBreakdown, validateSkeleton, type ValidationIssues } from './validateGeneration'
+import { validateBreakdown, validateSkeleton, validateScript, type ValidationIssues } from './validateGeneration'
 
 export interface RetryOptions {
   maxAttempts?: number
   baseDelayMs?: number
-  type: 'breakdown' | 'skeleton'
+  type: 'breakdown' | 'skeleton' | 'script'
 }
 
 export interface RetryResult<T = unknown> extends AIResponse<T> {
@@ -18,6 +18,7 @@ export interface RetryResult<T = unknown> extends AIResponse<T> {
 const validators = {
   breakdown: validateBreakdown,
   skeleton: validateSkeleton,
+  script: validateScript,
 }
 
 function isTransientError(err: unknown): boolean {

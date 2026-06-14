@@ -1,74 +1,17 @@
 import 'dotenv/config'
 import { runGeneration, type NicheInput } from '../server/utils/runGeneration'
-import { validateBreakdown, validateSkeleton } from '../server/utils/validateGeneration'
+import { validateBreakdown, validateSkeleton, validateScript } from '../server/utils/validateGeneration'
+import { NICHE_PROFILES } from '../server/utils/nicheProfiles'
 import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 
 const NICHES: NicheInput[] = [
   {
-    title: 'AI Tools & Productivity',
-    category: 'technology',
-    format: 'longform',
-    heat: 82,
-    rpmRange: '$8–$15',
-    outliers: [
-      { title: 'I Replaced My Entire Workflow With AI — Here\'s What Happened', views: 2400000 },
-      { title: '5 AI Tools Nobody Talks About (But Everyone Needs)', views: 1800000 },
-      { title: 'The AI Tool That Writes Better Than Most Humans', views: 950000 },
-    ],
-  },
-  {
-    title: 'Personal Finance & Investing',
-    category: 'finance',
-    format: 'longform',
-    heat: 91,
-    rpmRange: '$12–$25',
-    outliers: [
-      { title: 'How I Make $10K/Month Passive Income (Step by Step)', views: 3100000 },
-      { title: 'The Budgeting Method That Saved Me $30K in One Year', views: 2200000 },
-      { title: 'Why Most Financial Advice Is Wrong (Data Proves It)', views: 1500000 },
-    ],
-  },
-  {
-    title: 'True Crime Unsolved',
-    category: 'entertainment',
-    format: 'longform',
-    heat: 88,
-    rpmRange: '$6–$14',
-    outliers: [
-      { title: 'The Case Nobody Can Explain — Disappeared Without a Trace', views: 4200000 },
-      { title: 'Inside the Most Bizarre Cold Case in FBI History', views: 2800000 },
-      { title: 'This Killer Was Never Caught — And the Clues Make No Sense', views: 1900000 },
-    ],
-  },
-  {
-    title: 'Business Case Studies',
-    category: 'business',
-    format: 'longform',
-    heat: 76,
-    rpmRange: '$10–$22',
-    outliers: [
-      { title: 'How This Company Went From $0 to $100M in 18 Months', views: 1700000 },
-      { title: 'The Startup That Failed in 90 Days (Full Postmortem)', views: 1200000 },
-      { title: 'Why This Business Model Is Collapsing Right Now', views: 890000 },
-    ],
-  },
-  {
-    title: 'Hidden History',
-    category: 'history',
-    format: 'longform',
-    heat: 73,
-    rpmRange: '$5–$11',
-    outliers: [
-      { title: 'The Event They Deleted From History Books', views: 3500000 },
-      { title: 'Ancient Technology We Still Can\'t Replicate', views: 2100000 },
-      { title: 'The Lie About Christopher Columbus Everyone Believes', views: 1400000 },
-    ],
-  },
-  {
-    title: 'Family Revenge Stories',
+    title: 'Family Drama',
     category: 'drama',
     format: 'longform',
+    slug: 'family-drama',
+    profile: NICHE_PROFILES['family-drama'],
     heat: 85,
     rpmRange: '$4–$9',
     outliers: [
@@ -78,27 +21,59 @@ const NICHES: NicheInput[] = [
     ],
   },
   {
+    title: 'True Crime',
+    category: 'entertainment',
+    format: 'longform',
+    slug: 'true-crime',
+    profile: NICHE_PROFILES['true-crime'],
+    heat: 88,
+    rpmRange: '$6–$14',
+    outliers: [
+      { title: 'The Case Nobody Can Explain — Disappeared Without a Trace', views: 4200000 },
+      { title: 'Inside the Most Bizarre Cold Case in FBI History', views: 2800000 },
+      { title: 'This Killer Was Never Caught — And the Clues Make No Sense', views: 1900000 },
+    ],
+  },
+  {
+    title: 'Business Stories',
+    category: 'business',
+    format: 'longform',
+    slug: 'business-stories',
+    profile: NICHE_PROFILES['business-stories'],
+    heat: 76,
+    rpmRange: '$10–$22',
+    outliers: [
+      { title: 'How This Company Went From $0 to $100M in 18 Months', views: 1700000 },
+      { title: 'The Startup That Failed in 90 Days (Full Postmortem)', views: 1200000 },
+      { title: 'Why This Business Model Is Collapsing Right Now', views: 890000 },
+    ],
+  },
+  {
+    title: 'History',
+    category: 'history',
+    format: 'longform',
+    slug: 'history',
+    profile: NICHE_PROFILES['history'],
+    heat: 73,
+    rpmRange: '$5–$11',
+    outliers: [
+      { title: 'The Event They Deleted From History Books', views: 3500000 },
+      { title: 'Ancient Technology We Still Can\'t Replicate', views: 2100000 },
+      { title: 'The Lie About Christopher Columbus Everyone Believes', views: 1400000 },
+    ],
+  },
+  {
     title: 'Space & Cosmic Mysteries',
     category: 'science',
     format: 'longform',
+    slug: 'space-science',
+    profile: NICHE_PROFILES['space-science'],
     heat: 79,
     rpmRange: '$7–$16',
     outliers: [
       { title: 'What NASA Found on Europa Will Change Everything', views: 2900000 },
       { title: 'The Signal From Space That Nobody Can Explain', views: 1800000 },
       { title: 'Why Scientists Are Scared of What\'s Coming From Mars', views: 1300000 },
-    ],
-  },
-  {
-    title: 'Horror Stories That Feel Real',
-    category: 'entertainment',
-    format: 'longform',
-    heat: 87,
-    rpmRange: '$5–$12',
-    outliers: [
-      { title: 'The Most Disturbing Thing That Happened at 3AM', views: 4500000 },
-      { title: 'True Story: The House That Wouldn\'t Let Us Leave', views: 2700000 },
-      { title: 'I Work Night Shift — You Won\'t Believe What I Saw', views: 2000000 },
     ],
   },
 ]
@@ -126,6 +101,8 @@ function parseArgs() {
   return opts
 }
 
+type GenType = 'breakdown' | 'skeleton' | 'script'
+
 function isInfraError(err: unknown): boolean {
   if (!err) return false
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase()
@@ -142,9 +119,9 @@ async function main() {
   const cli = parseArgs()
   const provider = process.env.AI_PROVIDER ?? 'gemini'
   const model = process.env.GEMINI_MODEL ?? process.env.ANTHROPIC_MODEL ?? 'unknown'
-  const filterType = cli.type as ('breakdown' | 'skeleton') | undefined
+  const filterType = cli.type as GenType | undefined
   const runsPerNiche = cli.runs ?? 3
-  const types: Array<'breakdown' | 'skeleton'> = filterType ? [filterType] : ['breakdown', 'skeleton']
+  const types: GenType[] = filterType ? [filterType] : ['breakdown', 'skeleton']
   const totalExpected = NICHES.length * runsPerNiche * types.length
 
   console.log(`\n🔥 NicheHeat Generation Harness`)
@@ -157,6 +134,8 @@ async function main() {
   let infraCount = 0
 
   for (const niche of NICHES) {
+    let lastSkeleton: Record<string, unknown> | undefined
+
     for (const type of types) {
       for (let run = 1; run <= runsPerNiche; run++) {
         totalRun++
@@ -164,9 +143,22 @@ async function main() {
         process.stdout.write(`  ${label} ... `)
 
         try {
-          const result = await runGeneration(type, niche, { targetMinutes: 12 })
+          let result
+          if (type === 'script') {
+            if (!lastSkeleton) {
+              process.stdout.write('generating skeleton first... ')
+              const skelResult = await runGeneration('skeleton', niche, { targetMinutes: 12 })
+              lastSkeleton = skelResult.payload as Record<string, unknown>
+            }
+            result = await runGeneration(type, niche, { targetMinutes: 12, skeleton: lastSkeleton })
+          } else {
+            result = await runGeneration(type, niche, { targetMinutes: 12 })
+            if (type === 'skeleton') {
+              lastSkeleton = result.payload as Record<string, unknown>
+            }
+          }
 
-          const validator = type === 'breakdown' ? validateBreakdown : validateSkeleton
+          const validator = type === 'breakdown' ? validateBreakdown : type === 'skeleton' ? validateSkeleton : validateScript
           const issues = validator(result.payload)
 
           if (issues.length === 0) {
