@@ -19,3 +19,6 @@
 | [Session Resolution Paths](concepts/session-resolution-paths.md) | Two independent auth paths causing bugs | 2026-06-14 | 2026-06-14 |
 | [Client-Side History with RLS](concepts/client-side-history-rls.md) | History data fetched client-side with RLS policies | 2026-06-14 | 2026-06-14 |
 | [Auth → Generation](connections/auth-to-generation.md) | Session resolution affects generation quota checks | 2026-06-14 | 2026-06-14 |
+| [Banned-Phrase Validation](concepts/banned-phrase-validation.md) | Production validator scanning for 8 banned phrases | 2026-06-14 | 2026-06-14 |
+| [Prompt Anti-Ban Engineering](concepts/prompt-anti-ban-engineering.md) | Recency effect placement + anti-ban authenticity layer | 2026-06-14 | 2026-06-14 |
+| [Test Harness Architecture](concepts/test-harness-architecture.md) | End-to-end quality validation using production validators | 2026-06-14 | 2026-06-14 |

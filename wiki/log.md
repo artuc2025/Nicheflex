@@ -85,3 +85,24 @@
 
 ---
 
+## 2026-06-14 (Knowledge Compilation — Session 12:04)
+
+**Banned-Phrase Validation & Test Harness** — Moved banned-phrase check from harness-only into production validator; documented anti-ban prompt engineering and test harness architecture.
+
+### New Articles Created
+- **Banned-Phrase Validation**: Production validator scanning for 8 banned phrases in `validateGeneration.ts`
+- **Prompt Anti-Ban Engineering**: Recency effect placement of anti-ban rules at end of skeleton prompt
+- **Test Harness Architecture**: End-to-end quality validation using production validators as single source of truth
+
+### Key Insights Captured
+1. **Single Source of Truth**: Production validators (not harness) define pass/fail — prevents drift
+2. **Recency Effect**: Anti-ban rules at END of prompt improve LLM compliance over mid-prompt placement
+3. **Harness Verdict**: ≥90% pass = beta-ready, ≥75% = warn, <75% = rewrite prompts
+4. **Gemini JSON Mode Unreliable**: `responseMimeType: 'application/json'` wraps complex schemas in markdown fences
+
+### Files Updated
+- `wiki/index.md` — Added 3 new entries
+- `wiki/log.md` — Added compilation entry
+
+---
+
