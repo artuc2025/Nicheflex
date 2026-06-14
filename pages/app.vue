@@ -157,7 +157,7 @@
               @click="generateForNiche(selectedNiche, 'breakdown')"
             >
               <svg v-if="generatingFor === selectedNiche.id && generatingType === 'breakdown'" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              Generate Breakdown
+              {{ savedBreakdown ? 'Regenerate' : 'Generate' }} Breakdown
             </button>
             <button
               class="flex items-center gap-2 rounded-lg border border-orange-500 px-4 py-2 text-sm font-semibold text-orange-400 hover:bg-orange-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -165,7 +165,7 @@
               @click="generateForNiche(selectedNiche, 'skeleton')"
             >
               <svg v-if="generatingFor === selectedNiche.id && generatingType === 'skeleton'" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              Generate Skeleton
+              {{ savedSkeleton ? 'Regenerate' : 'Generate' }} Skeleton
             </button>
           </div>
 
@@ -181,16 +181,19 @@
             </div>
           </div>
 
-          <div v-if="genResult && genResultType === 'breakdown'" class="mb-6 space-y-4">
-            <h3 class="text-lg font-bold text-orange-400">Niche Breakdown</h3>
+          <div v-if="activeBreakdown" class="mb-6 space-y-4">
+            <div class="flex items-center gap-3">
+              <h3 class="text-lg font-bold text-orange-400">Niche Breakdown</h3>
+              <span v-if="savedBreakdownDate && !genResult" class="text-xs text-gray-500">Generated {{ timeAgo(savedBreakdownDate) }}</span>
+            </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Why It Works</h4>
-              <p class="mt-1 text-sm text-gray-300">{{ genResult.why_it_works }}</p>
+              <p class="mt-1 text-sm text-gray-300">{{ activeBreakdown!.why_it_works }}</p>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Narrative Mechanics</h4>
               <ul class="mt-1 space-y-1">
-                <li v-for="(m, i) in genResult.narrative_mechanics" :key="i" class="flex items-start gap-2 text-sm text-gray-300">
+                <li v-for="(m, i) in activeBreakdown!.narrative_mechanics" :key="i" class="flex items-start gap-2 text-sm text-gray-300">
                   <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
                   {{ m }}
                 </li>
@@ -199,35 +202,35 @@
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Hook Patterns</h4>
               <div class="mt-1 space-y-2">
-                <div v-for="(h, i) in genResult.hook_patterns" :key="i" class="rounded-lg bg-gray-800/50 px-3 py-2 text-sm text-gray-300">
+                <div v-for="(h, i) in activeBreakdown!.hook_patterns" :key="i" class="rounded-lg bg-gray-800/50 px-3 py-2 text-sm text-gray-300">
                   {{ h }}
                 </div>
               </div>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Audience Psychology</h4>
-              <p class="mt-1 text-sm text-gray-300">{{ genResult.audience_psychology }}</p>
+              <p class="mt-1 text-sm text-gray-300">{{ activeBreakdown!.audience_psychology }}</p>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Saturation Risk</h4>
               <div class="mt-1 flex items-center gap-2">
                 <span class="inline-block rounded px-2 py-0.5 text-xs font-bold" :class="{
-                  'bg-green-500/20 text-green-400': genResult.saturation_risk.level === 'low',
-                  'bg-yellow-500/20 text-yellow-400': genResult.saturation_risk.level === 'medium',
-                  'bg-red-500/20 text-red-400': genResult.saturation_risk.level === 'high',
-                }">{{ genResult.saturation_risk.level }}</span>
-                <span class="text-xs text-gray-500">Window: {{ genResult.saturation_risk.window_estimate }}</span>
+                  'bg-green-500/20 text-green-400': activeBreakdown!.saturation_risk.level === 'low',
+                  'bg-yellow-500/20 text-yellow-400': activeBreakdown!.saturation_risk.level === 'medium',
+                  'bg-red-500/20 text-red-400': activeBreakdown!.saturation_risk.level === 'high',
+                }">{{ activeBreakdown!.saturation_risk.level }}</span>
+                <span class="text-xs text-gray-500">Window: {{ activeBreakdown!.saturation_risk.window_estimate }}</span>
               </div>
-              <p class="mt-1 text-sm text-gray-400">{{ genResult.saturation_risk.reasoning }}</p>
+              <p class="mt-1 text-sm text-gray-400">{{ activeBreakdown!.saturation_risk.reasoning }}</p>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Entry Angle</h4>
-              <p class="mt-1 text-sm text-gray-300">{{ genResult.entry_angle }}</p>
+              <p class="mt-1 text-sm text-gray-300">{{ activeBreakdown!.entry_angle }}</p>
             </div>
-            <div v-if="genResult.red_flags?.length">
+            <div v-if="activeBreakdown!.red_flags?.length">
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Red Flags</h4>
               <ul class="mt-1 space-y-1">
-                <li v-for="(f, i) in genResult.red_flags" :key="i" class="flex items-start gap-2 text-sm text-red-400">
+                <li v-for="(f, i) in activeBreakdown!.red_flags" :key="i" class="flex items-start gap-2 text-sm text-red-400">
                   <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
                   {{ f }}
                 </li>
@@ -235,12 +238,15 @@
             </div>
           </div>
 
-          <div v-if="genResult && genResultType === 'skeleton'" class="mb-6 space-y-4">
-            <h3 class="text-lg font-bold text-orange-400">Script Skeleton</h3>
+          <div v-if="activeSkeleton" class="mb-6 space-y-4">
+            <div class="flex items-center gap-3">
+              <h3 class="text-lg font-bold text-orange-400">Script Skeleton</h3>
+              <span v-if="savedSkeletonDate && !genResult" class="text-xs text-gray-500">Generated {{ timeAgo(savedSkeletonDate) }}</span>
+            </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Title Options</h4>
               <div class="mt-1 space-y-1">
-                <div v-for="(t, i) in genResult.title_options" :key="i" class="rounded-lg bg-gray-800/50 px-3 py-2 text-sm text-gray-300">
+                <div v-for="(t, i) in activeSkeleton!.title_options" :key="i" class="rounded-lg bg-gray-800/50 px-3 py-2 text-sm text-gray-300">
                   {{ t }}
                 </div>
               </div>
@@ -248,19 +254,19 @@
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Hook</h4>
               <div class="mt-1 rounded-lg bg-gray-800/50 p-3 space-y-1">
-                <p class="text-sm text-orange-300">"{{ genResult.hook.spoken_line }}"</p>
-                <p class="text-xs text-gray-400">Visual: {{ genResult.hook.visual_note }}</p>
-                <p class="text-xs text-gray-500 italic">Q: {{ genResult.hook.open_question }}</p>
+                <p class="text-sm text-orange-300">"{{ activeSkeleton!.hook.spoken_line }}"</p>
+                <p class="text-xs text-gray-400">Visual: {{ activeSkeleton!.hook.visual_note }}</p>
+                <p class="text-xs text-gray-500 italic">Q: {{ activeSkeleton!.hook.open_question }}</p>
               </div>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Mystery Object</h4>
-              <p class="mt-1 text-sm text-gray-300">{{ genResult.mystery_object.what }} <span class="text-gray-500">(Act {{ genResult.mystery_object.first_mention_act }} → reveal Act {{ genResult.mystery_object.reveal_act }})</span></p>
+              <p class="mt-1 text-sm text-gray-300">{{ activeSkeleton!.mystery_object.what }} <span class="text-gray-500">(Act {{ activeSkeleton!.mystery_object.first_mention_act }} → reveal Act {{ activeSkeleton!.mystery_object.reveal_act }})</span></p>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Acts</h4>
               <div class="mt-2 space-y-3">
-                <div v-for="act in genResult.acts" :key="act.n">
+                <div v-for="act in activeSkeleton!.acts" :key="act.n">
                   <div class="flex items-center gap-3 mb-1">
                     <span class="text-xs font-bold text-orange-400">Act {{ act.n }}</span>
                     <span class="text-xs text-gray-500">{{ act.label }}</span>
@@ -282,29 +288,29 @@
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Reveal</h4>
-              <p class="mt-1 text-sm text-gray-300">{{ genResult.reveal.what_changes }}</p>
-              <p class="text-xs text-gray-500">Recontextualizes scenes {{ genResult.reveal.recontextualizes_scenes.join(', ') }}</p>
+              <p class="mt-1 text-sm text-gray-300">{{ activeSkeleton!.reveal.what_changes }}</p>
+              <p class="text-xs text-gray-500">Recontextualizes scenes {{ activeSkeleton!.reveal.recontextualizes_scenes.join(', ') }}</p>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Counterattack Waves</h4>
               <ul class="mt-1 space-y-1">
-                <li v-for="(w, i) in genResult.counterattack_waves" :key="i" class="text-sm text-gray-300">{{ w }}</li>
+                <li v-for="(w, i) in activeSkeleton!.counterattack_waves" :key="i" class="text-sm text-gray-300">{{ w }}</li>
               </ul>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Narrator Asides</h4>
               <ul class="mt-1 space-y-1">
-                <li v-for="(a, i) in genResult.narrator_asides" :key="i" class="text-sm text-gray-300 italic">"{{ a }}"</li>
+                <li v-for="(a, i) in activeSkeleton!.narrator_asides" :key="i" class="text-sm text-gray-300 italic">"{{ a }}"</li>
               </ul>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">CTA</h4>
-              <p class="mt-1 text-sm text-gray-300">{{ genResult.cta }}</p>
+              <p class="mt-1 text-sm text-gray-300">{{ activeSkeleton!.cta }}</p>
             </div>
             <div>
               <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wide">Authenticity Checklist</h4>
               <ul class="mt-1 space-y-1">
-                <li v-for="(c, i) in genResult.authenticity_checklist" :key="i" class="flex items-start gap-2 text-sm text-gray-300">
+                <li v-for="(c, i) in activeSkeleton!.authenticity_checklist" :key="i" class="flex items-start gap-2 text-sm text-gray-300">
                   <span class="mt-1 text-green-400">✓</span>
                   {{ c }}
                 </li>
@@ -398,6 +404,11 @@ const genErrorCode = ref<number | null>(null)
 const lastGenerationNicheId = ref<string | null>(null)
 const lastGenerationType = ref<'breakdown' | 'skeleton' | null>(null)
 
+const savedBreakdown = ref<Record<string, unknown> | null>(null)
+const savedSkeleton = ref<Record<string, unknown> | null>(null)
+const savedBreakdownDate = ref<string | null>(null)
+const savedSkeletonDate = ref<string | null>(null)
+
 const history = ref<HistoryRow[]>([])
 const historyLoading = ref(false)
 
@@ -424,6 +435,9 @@ const genErrorClass = computed(() => {
   return 'border-red-500/30 bg-red-500/10 text-red-300'
 })
 
+const activeBreakdown = computed(() => genResult.value && genResultType.value === 'breakdown' ? genResult.value : savedBreakdown.value)
+const activeSkeleton = computed(() => genResult.value && genResultType.value === 'skeleton' ? genResult.value : savedSkeleton.value)
+
 function heatClass(score: number) {
   if (score >= 60) return 'bg-red-500/20 text-red-400'
   if (score >= 50) return 'bg-orange-500/20 text-orange-400'
@@ -448,6 +462,40 @@ function formatAge(days: number) {
   return days + 'd'
 }
 
+function timeAgo(dateStr: string) {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d ago`
+  return new Date(dateStr).toLocaleDateString()
+}
+
+async function loadSavedGenerations(nicheId: string) {
+  if (!user.value?.id) return
+  const { data } = await supabase
+    .from('generations')
+    .select('type, payload_json, created_at')
+    .eq('user_id', user.value.id)
+    .eq('niche_id', nicheId)
+    .order('created_at', { ascending: false })
+    .limit(2)
+
+  if (!data) return
+  for (const row of data as Array<{ type: string; payload_json: Record<string, unknown>; created_at: string }>) {
+    if (row.type === 'breakdown' && !savedBreakdown.value) {
+      savedBreakdown.value = row.payload_json
+      savedBreakdownDate.value = row.created_at
+    } else if (row.type === 'skeleton' && !savedSkeleton.value) {
+      savedSkeleton.value = row.payload_json
+      savedSkeletonDate.value = row.created_at
+    }
+  }
+}
+
 async function fetchNiches() {
   loading.value = true
   try {
@@ -464,12 +512,21 @@ async function openNiche(niche: NicheRow) {
   genResultType.value = null
   genError.value = ''
   genErrorCode.value = null
+  savedBreakdown.value = null
+  savedSkeleton.value = null
+  savedBreakdownDate.value = null
+  savedSkeletonDate.value = null
   outlierLoading.value = true
   try {
-    const data = await $fetch('/api/outliers', {
-      params: { niche_id: niche.id, week: niche.week },
-    })
-    outliers.value = data as OutlierRow[]
+    await Promise.all([
+      (async () => {
+        const data = await $fetch('/api/outliers', {
+          params: { niche_id: niche.id, week: niche.week },
+        })
+        outliers.value = data as OutlierRow[]
+      })(),
+      loadSavedGenerations(niche.id),
+    ])
   } finally {
     outlierLoading.value = false
   }
@@ -497,6 +554,13 @@ async function generateForNiche(niche: NicheRow, type: 'breakdown' | 'skeleton')
 
     genResult.value = (res as any).payload
     genResultType.value = type
+    if (type === 'breakdown') {
+      savedBreakdown.value = (res as any).payload
+      savedBreakdownDate.value = new Date().toISOString()
+    } else {
+      savedSkeleton.value = (res as any).payload
+      savedSkeletonDate.value = new Date().toISOString()
+    }
   } catch (err: any) {
     const status = err?.response?.status || err?.statusCode
     if (status === 401) {
