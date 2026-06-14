@@ -153,3 +153,9 @@ CREATE POLICY "Users can view own generations"
 CREATE POLICY "Users can create own generations"
   ON generations FOR INSERT
   WITH CHECK (auth.uid() = user_id);
+
+-- =============================================
+-- MIGRATION: Add ratio + heat to outlier_videos
+-- =============================================
+ALTER TABLE outlier_videos ADD COLUMN IF NOT EXISTS ratio NUMERIC(10,4) DEFAULT 0;
+ALTER TABLE outlier_videos ADD COLUMN IF NOT EXISTS heat NUMERIC(6,4) DEFAULT 0;

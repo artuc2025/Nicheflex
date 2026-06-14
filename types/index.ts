@@ -28,8 +28,11 @@ export interface OutlierVideo {
   views: number
   vph: number
   channel_id: string
+  channel_name: string
   published_at: string
   snapshot_week: string
+  ratio: number
+  heat: number
 }
 
 export interface UserProfile {

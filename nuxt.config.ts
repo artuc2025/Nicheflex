@@ -19,10 +19,12 @@ export default defineNuxtConfig({
   runtimeConfig: {
     youtubeApiKey: '',
     anthropicApiKey: '',
+    adminUserId: '',
     resendApiKey: '',
     resendFrom: '',
     public: {
       siteUrl: '',
+      adminUserId: '',
     },
   },
 

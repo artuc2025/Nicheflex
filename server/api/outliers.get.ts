@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     .from('outlier_videos')
     .select('*')
     .eq('niche_id', nicheId)
-    .order('views', { ascending: false })
+    .order('heat', { ascending: false })
     .limit(5)
 
   if (week) videoQuery = videoQuery.eq('snapshot_week', week)

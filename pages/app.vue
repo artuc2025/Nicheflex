@@ -17,12 +17,16 @@
           <p class="mt-1 text-gray-400">Week {{ currentWeek }} · {{ niches.length }} niches scanned</p>
         </div>
         <button
+          v-if="isAdmin"
           class="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold hover:bg-orange-600"
           @click="runScan"
           :disabled="scanning"
         >
           {{ scanning ? 'Scanning...' : 'Scan Now' }}
         </button>
+      </div>
+      <div v-if="scanError" class="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        {{ scanError }}
       </div>
 
       <div class="mb-6 flex gap-3">
@@ -318,7 +322,7 @@
             </div>
           </div>
 
-          <h3 class="mb-3 text-sm font-semibold text-gray-400 uppercase tracking-wide">Top 5 Outlier Videos</h3>
+          <h3 class="mb-3 text-sm font-semibold text-gray-400 uppercase tracking-wide">Qualifying Outlier Videos</h3>
           <div v-if="outlierLoading" class="py-6 text-center text-gray-500">Loading...</div>
           <div v-else class="space-y-2">
             <div
@@ -331,12 +335,16 @@
                 <div class="truncate text-sm font-medium">{{ video.title }}</div>
                 <div class="text-xs text-gray-500">{{ video.channel_name }}</div>
               </div>
-              <div class="text-right shrink-0">
+              <div class="text-right shrink-0 space-y-0.5">
                 <div class="text-sm font-semibold text-orange-400">{{ formatViews(video.views) }}</div>
-                <div class="text-xs text-gray-500">{{ video.vph.toFixed(0) }} vph</div>
+                <div class="flex items-center gap-2 text-xs text-gray-500">
+                  <span :class="video.ratio >= 10 ? 'text-green-400' : 'text-gray-400'">{{ video.ratio.toFixed(1) }}x</span>
+                  <span class="text-gray-600">·</span>
+                  <span :class="video.heat >= 0.6 ? 'text-orange-400' : 'text-gray-400'">{{ (video.heat * 100).toFixed(0) }}%</span>
+                </div>
               </div>
             </div>
-            <div v-if="outliers.length === 0" class="py-6 text-center text-gray-500">No outlier data yet.</div>
+            <div v-if="outliers.length === 0" class="py-6 text-center text-gray-500">No qualifying outliers yet.</div>
           </div>
         </div>
       </div>
@@ -375,6 +383,8 @@ interface OutlierRow {
   vph: number
   channel_name: string
   published_at: string
+  ratio: number
+  heat: number
 }
 
 interface HistoryRow {
@@ -411,6 +421,13 @@ const savedSkeletonDate = ref<string | null>(null)
 
 const history = ref<HistoryRow[]>([])
 const historyLoading = ref(false)
+const scanError = ref('')
+
+const isAdmin = computed(() => {
+  const config = useRuntimeConfig()
+  const uid = user.value?.sub || (user.value as any)?.id
+  return uid && config.public.adminUserId && uid === config.public.adminUserId
+})
 
 const currentWeek = computed(() => {
   const d = new Date()
@@ -628,9 +645,19 @@ function openHistoryItem(gen: HistoryRow) {
 
 async function runScan() {
   scanning.value = true
+  scanError.value = ''
   try {
     await $fetch('/api/scan', { method: 'POST' })
     await fetchNiches()
+  } catch (err: any) {
+    const status = err?.response?.status || err?.statusCode
+    if (status === 403) {
+      scanError.value = 'Admin access required.'
+    } else if (status === 429) {
+      scanError.value = err?.response?._data?.statusMessage || err?.data?.statusMessage || 'Scan cooldown active.'
+    } else {
+      scanError.value = 'Scan failed. Please try again.'
+    }
   } finally {
     scanning.value = false
   }

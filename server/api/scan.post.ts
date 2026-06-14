@@ -3,28 +3,138 @@ import {
   searchVideos,
   getVideoDetails,
   getChannelDetails,
-  calcVPH,
-  calcHeatScore,
+  computeOutlier,
+  computeHeat,
+  qualifies,
+  nicheHeatScore,
+  rpmForCategory,
+  isoDurationToSeconds,
   getWeekString,
+  type YouTubeVideoItem,
+  type YouTubeChannelItem,
+  type NicheFilterParams,
 } from '../utils/youtube'
 
-const NICHES = [
-  { slug: 'finance', title: 'Finance & Investing', query: 'finance investing money', category: 'finance' },
-  { slug: 'ai-tools', title: 'AI News & Tools', query: 'artificial intelligence tools news', category: 'ai' },
-  { slug: 'true-crime', title: 'True Crime', query: 'true crime documentary', category: 'true-crime' },
-  { slug: 'business-stories', title: 'Business Stories', query: 'business story company rise fall', category: 'business' },
-  { slug: 'history', title: 'History Documentary', query: 'history documentary', category: 'history' },
-  { slug: 'family-drama', title: 'Family Drama / Karma', query: 'family drama revenge karma story', category: 'drama' },
-  { slug: 'space-science', title: 'Space & Science', query: 'space science discovery', category: 'science' },
-  { slug: 'horror-stories', title: 'Horror Narration', query: 'horror scary story narration', category: 'horror' },
+interface NicheConfig {
+  slug: string
+  title: string
+  category: string
+  queries: string[]
+  filters: NicheFilterParams
+}
+
+const NICHES: NicheConfig[] = [
+  {
+    slug: 'finance', title: 'Finance & Investing', category: 'finance',
+    queries: ['personal finance tips', 'investing for beginners', 'money habits rich', 'passive income ideas'],
+    filters: { minRatio: 2, maxSubscribers: 1000000, minDurationSec: 120, maxDurationSec: 1200, minViews: 30000 },
+  },
+  {
+    slug: 'ai-tools', title: 'AI News & Tools', category: 'ai-tools',
+    queries: ['ChatGPT tips tricks', 'AI tool tutorial', 'best AI apps 2026', 'AI productivity workflow'],
+    filters: { minRatio: 2, maxSubscribers: 500000, minDurationSec: 60, maxDurationSec: 900, minViews: 20000 },
+  },
+  {
+    slug: 'true-crime', title: 'True Crime', category: 'true-crime',
+    queries: ['unsolved case', 'true crime story', 'cold case mystery', 'serial killer documentary'],
+    filters: { minRatio: 1.5, maxSubscribers: 2000000, minDurationSec: 300, maxDurationSec: 3600, minViews: 50000 },
+  },
+  {
+    slug: 'business-stories', title: 'Business Stories', category: 'business-stories',
+    queries: ['company rise and fall', 'business failure story', 'startup failed', 'corporate scandal'],
+    filters: { minRatio: 2, maxSubscribers: 500000, minDurationSec: 300, maxDurationSec: 1800, minViews: 20000 },
+  },
+  {
+    slug: 'history', title: 'History Documentary', category: 'history',
+    queries: ['ancient mystery', 'forgotten history', 'history fact surprising', 'historical event explained'],
+    filters: { minRatio: 1.5, maxSubscribers: 2000000, minDurationSec: 300, maxDurationSec: 3600, minViews: 50000 },
+  },
+  {
+    slug: 'family-drama', title: 'Family Drama / Karma', category: 'family-drama',
+    queries: ['karma story real', 'family betrayal story', 'revenge story', 'family drama confession'],
+    filters: { minRatio: 2, maxSubscribers: 500000, minDurationSec: 120, maxDurationSec: 3600, minViews: 15000 },
+  },
+  {
+    slug: 'space-science', title: 'Space & Science', category: 'space-science',
+    queries: ['space discovery recent', 'NASA finding', 'solar system mystery', 'universe explained'],
+    filters: { minRatio: 1.5, maxSubscribers: 2000000, minDurationSec: 300, maxDurationSec: 3600, minViews: 50000 },
+  },
+  {
+    slug: 'horror-stories', title: 'Horror Narration', category: 'horror-stories',
+    queries: ['animated horror story', 'creepypasta narrated', 'scary story animation', 'reddit horror story narrated'],
+    filters: { minRatio: 2, maxSubscribers: 500000, minDurationSec: 120, maxDurationSec: 1800, minViews: 15000 },
+  },
 ]
 
-const supabase = createClient(
-  process.env.NUXT_PUBLIC_SUPABASE_URL!,
-  process.env.NUXT_SUPABASE_SECRET_KEY || process.env.NUXT_PUBLIC_SUPABASE_KEY!,
-)
+const COOLDOWN_HOURS = 8
+const DAILY_UNITS_CAP = 9000
+
+function createSupabase() {
+  return createClient(
+    process.env.NUXT_PUBLIC_SUPABASE_URL!,
+    process.env.NUXT_SUPABASE_SECRET_KEY || process.env.NUXT_PUBLIC_SUPABASE_KEY!,
+  )
+}
 
 export default defineEventHandler(async (event) => {
+  const supabase = createSupabase()
+  const config = useRuntimeConfig()
+
+  let userId: string | null = null
+  const authHeader = event.headers?.get?.('authorization')
+    || (event.node?.req?.headers?.authorization as string | undefined)
+
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7)
+    const { data: { user }, error } = await supabase.auth.getUser(token)
+    if (!error && user) userId = user.id
+  }
+
+  if (!userId) {
+    const { data: { user } } = await supabase.auth.getUser()
+    userId = user?.id || null
+  }
+
+  const adminUserId = config.adminUserId || config.public.adminUserId
+  if (!adminUserId || userId !== adminUserId) {
+    throw createError({ statusCode: 403, statusMessage: 'Admin access required' })
+  }
+
+  const { data: latestSnap } = await supabase
+    .from('niche_snapshots')
+    .select('created_at')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (latestSnap) {
+    const lastScan = new Date(latestSnap.created_at)
+    const hoursSince = (Date.now() - lastScan.getTime()) / (1000 * 60 * 60)
+    if (hoursSince < COOLDOWN_HOURS) {
+      const remaining = Math.ceil(COOLDOWN_HOURS - hoursSince)
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Scan cooldown active. Try again in ${remaining}h.`,
+      })
+    }
+  }
+
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const { data: todaySnaps } = await supabase
+    .from('niche_snapshots')
+    .select('id')
+    .gte('created_at', todayStart.toISOString())
+
+  const scansToday = todaySnaps ? Math.ceil(todaySnaps.length / 8) : 0
+  const estimatedUnitsToday = scansToday * 3216
+  if (estimatedUnitsToday + 3216 > DAILY_UNITS_CAP) {
+    throw createError({
+      statusCode: 429,
+      statusMessage: `Daily YouTube quota cap (9000 units) would be exceeded. ~${estimatedUnitsToday} used today. Try again tomorrow.`,
+    })
+  }
+
   const apiKey = process.env.NUXT_YOUTUBE_API_KEY
   if (!apiKey) {
     throw createError({ statusCode: 500, statusMessage: 'YouTube API key not configured' })
@@ -32,63 +142,85 @@ export default defineEventHandler(async (event) => {
 
   const week = getWeekString()
   const results: Record<string, unknown>[] = []
+  let totalUnitsEstimate = 0
 
   for (const niche of NICHES) {
     try {
-      const thirtyDaysAgo = new Date()
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      const isoDate = thirtyDaysAgo.toISOString()
+      const ninetyDaysAgo = new Date()
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+      const isoDate = ninetyDaysAgo.toISOString()
 
-      const searchResults = await searchVideos(apiKey, {
-        q: niche.query,
-        publishedAfter: isoDate,
-        maxResults: 20,
-        order: 'viewCount',
-        videoDuration: 'long',
-      })
+      const allSearchResults: Map<string, { videoId: string; snippet: any }> = new Map()
+      for (const query of niche.queries) {
+        const searchResults = await searchVideos(apiKey, {
+          q: query,
+          publishedAfter: isoDate,
+          maxResults: 20,
+          order: 'viewCount',
+          videoDuration: 'long',
+        })
+        totalUnitsEstimate += 100
+        for (const r of searchResults) {
+          if (!allSearchResults.has(r.id.videoId)) {
+            allSearchResults.set(r.id.videoId, r)
+          }
+        }
+      }
 
-      if (!searchResults.length) {
-        results.push({ niche: niche.slug, status: 'no_results' })
+      const searchItems = Array.from(allSearchResults.values())
+
+      if (!searchItems.length) {
+        await upsertNicheWithSnapshot(supabase, niche, week, 0, 0, 0)
+        results.push({ niche: niche.slug, status: 'no_results', outliers: 0, heat_score: 0 })
         continue
       }
 
-      const videoIds = searchResults.map((r) => r.id.videoId)
+      const videoIds = searchItems.map((r) => r.id.videoId)
       const videos = await getVideoDetails(apiKey, videoIds)
+      totalUnitsEstimate += 1
 
       const channelIds = [...new Set(videos.map((v) => v.snippet.channelId))]
       const channels = await getChannelDetails(apiKey, channelIds)
-      const channelMap = new Map(channels.map((c) => [c.id, c]))
+      totalUnitsEstimate += 1
 
-      let totalViews7d = 0
-      let totalViews30d = 0
-      const weekAgo = new Date()
-      weekAgo.setDate(weekAgo.getDate() - 7)
+      const channelMap = new Map<string, YouTubeChannelItem>(channels.map((c) => [c.id, c]))
+
+      const qualifying: Array<{
+        video: YouTubeVideoItem
+        outlier: { views: number; subs: number; ratio: number; heat: number }
+        heat: number
+      }> = []
+
+      const rejectionReasons: Record<string, number> = {}
 
       for (const video of videos) {
-        const views = parseInt(video.statistics.viewCount || '0')
-        const pubDate = new Date(video.snippet.publishedAt)
-        if (pubDate > weekAgo) totalViews7d += views
-        totalViews30d += views
+        const channel = channelMap.get(video.snippet.channelId)
+        if (!channel) continue
+
+        const outlier = computeOutlier(video, channel)
+        const durationSec = isoDurationToSeconds(video.contentDetails.duration)
+        const ageDays = (Date.now() - new Date(video.snippet.publishedAt).getTime()) / (1000 * 60 * 60 * 24)
+
+        const heat = computeHeat({ views: outlier.views, subs: outlier.subs, ratio: outlier.ratio, ageDays, daysBack: 90 })
+        const outlierWithHeat = { ...outlier, heat }
+
+        const doesQualify = qualifies(outlierWithHeat, durationSec, video.snippet.title, niche.filters, video)
+
+        if (doesQualify) {
+          qualifying.push({ video, outlier: outlierWithHeat, heat })
+        } else {
+          let reason = 'other'
+          if (outlier.ratio < niche.filters.minRatio) reason = 'ratio'
+          else if (outlier.views < niche.filters.minViews) reason = 'views'
+          else if (outlier.subs > niche.filters.maxSubscribers) reason = 'subs'
+          else if (durationSec < niche.filters.minDurationSec) reason = 'too_short'
+          else if (durationSec > niche.filters.maxDurationSec) reason = 'too_long'
+          rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1
+        }
       }
 
-      const avgRpmLow = 3
-      const avgRpmHigh = 12
-      const uniqueChannels = new Set(videos.map((v) => v.snippet.channelId))
-      const avgChannelAge = channels.length
-        ? Math.round(
-            channels.reduce((acc, ch) => {
-              const age = (Date.now() - new Date(ch.snippet.publishedAt).getTime()) / (1000 * 60 * 60 * 24)
-              return acc + age
-            }, 0) / channels.length,
-          )
-        : 0
-
-      const heatScore = calcHeatScore({
-        viewsGrowth7d: totalViews7d,
-        viewsGrowth30d: totalViews30d,
-        rpmHigh: avgRpmHigh,
-        channelsCount: uniqueChannels.size,
-      })
+      const heatScore = nicheHeatScore(qualifying.map((q) => q.heat))
+      const [rpmLow, rpmHigh] = rpmForCategory(niche.category)
 
       const { data: nicheRow, error: nicheErr } = await supabase
         .from('niches')
@@ -105,41 +237,52 @@ export default defineEventHandler(async (event) => {
         {
           niche_id: nicheRow.id,
           week,
-          heat_score: heatScore,
-          rpm_low: avgRpmLow,
-          rpm_high: avgRpmHigh,
-          views_7d: totalViews7d,
-          views_30d: totalViews30d,
-          channels_count: uniqueChannels.size,
-          avg_channel_age_days: avgChannelAge,
+          heat_score: Math.round(heatScore * 100) / 100,
+          rpm_low: rpmLow,
+          rpm_high: rpmHigh,
+          views_7d: 0,
+          views_30d: 0,
+          channels_count: new Set(videos.map((v) => v.snippet.channelId)).size,
+          avg_channel_age_days: 0,
+          created_at: new Date().toISOString(),
         },
         { onConflict: 'niche_id,week' },
       )
 
       if (snapErr) throw snapErr
 
-      const topVideos = videos.slice(0, 5).map((v) => ({
-        niche_id: nicheRow.id,
-        yt_video_id: v.id,
-        title: v.snippet.title,
-        views: parseInt(v.statistics.viewCount || '0'),
-        vph: calcVPH(parseInt(v.statistics.viewCount || '0'), v.snippet.publishedAt),
-        channel_id: v.snippet.channelId,
-        channel_name: v.snippet.channelTitle,
-        published_at: v.snippet.publishedAt,
-        snapshot_week: week,
-      }))
-
       await supabase.from('outlier_videos').delete().match({ niche_id: nicheRow.id, snapshot_week: week })
-      await supabase.from('outlier_videos').insert(topVideos)
+
+      if (qualifying.length > 0) {
+        const topOutliers = qualifying
+          .sort((a, b) => b.heat - a.heat)
+          .slice(0, 10)
+          .map((q) => ({
+            niche_id: nicheRow.id,
+            yt_video_id: q.video.id,
+            title: q.video.snippet.title,
+            views: q.outlier.views,
+            vph: 0,
+            channel_id: q.video.snippet.channelId,
+            channel_name: q.video.snippet.channelTitle,
+            published_at: q.video.snippet.publishedAt,
+            snapshot_week: week,
+            ratio: Math.round(q.outlier.ratio * 100) / 100,
+            heat: Math.round(q.heat * 1000) / 1000,
+          }))
+
+        await supabase.from('outlier_videos').insert(topOutliers)
+      }
 
       results.push({
         niche: niche.slug,
-        heat_score: heatScore,
-        views_7d: totalViews7d,
-        views_30d: totalViews30d,
-        channels: uniqueChannels.size,
-        top_video: topVideos[0]?.title || 'N/A',
+        heat_score: Math.round(heatScore * 100) / 100,
+        outliers: qualifying.length,
+        total_scanned: videos.length,
+        queries: niche.queries.length,
+        rpm: `$${rpmLow}–$${rpmHigh}`,
+        top_video: qualifying[0]?.video.snippet.title || 'N/A',
+        rejections: rejectionReasons,
       })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
@@ -147,5 +290,49 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  return { week, scanned: results.length, results }
+  const totalQueries = NICHES.reduce((sum, n) => sum + n.queries.length, 0)
+
+  return {
+    week,
+    scanned: results.length,
+    total_queries: totalQueries,
+    api_units_estimate: totalUnitsEstimate,
+    results,
+  }
 })
+
+async function upsertNicheWithSnapshot(
+  supabase: ReturnType<typeof createSupabase>,
+  niche: { slug: string; title: string; category: string },
+  week: string,
+  heatScore: number,
+  rpmLow: number,
+  rpmHigh: number,
+) {
+  const { data: nicheRow, error: nicheErr } = await supabase
+    .from('niches')
+    .upsert(
+      { slug: niche.slug, title: niche.title, language: 'en', format: 'long', category: niche.category },
+      { onConflict: 'slug' },
+    )
+    .select('id')
+    .single()
+
+  if (nicheErr) throw nicheErr
+
+  await supabase.from('niche_snapshots').upsert(
+    {
+      niche_id: nicheRow.id,
+      week,
+      heat_score: heatScore,
+      rpm_low: rpmLow,
+      rpm_high: rpmHigh,
+      views_7d: 0,
+      views_30d: 0,
+      channels_count: 0,
+      avg_channel_age_days: 0,
+      created_at: new Date().toISOString(),
+    },
+    { onConflict: 'niche_id,week' },
+  )
+}
